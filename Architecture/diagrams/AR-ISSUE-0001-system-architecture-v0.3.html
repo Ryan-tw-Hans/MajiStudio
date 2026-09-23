@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Android 名片辨識系統架構 v0.3</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --paper: #f5f5f5;
+      --ink: #2d3142;
+      --muted: #4f5d75;
+      --soft: #7a8399;
+      --rule: rgba(45, 49, 66, 0.12);
+      --accent: #eb6c36;
+      --accent-tint: rgba(235, 108, 54, 0.08);
+      --link: #2e5aa8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Geist", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    main { width: min(1280px, 100%); margin: 0 auto; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: "Instrument Serif", "Noto Serif TC", serif;
+      font-size: 36px;
+      font-weight: 400;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      max-width: 920px;
+      margin: 12px 0 24px;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    svg { display: block; width: 100%; height: auto; }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 0.9fr;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .card {
+      padding: 20px;
+      background: #ffffff;
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+    }
+
+    .card h2 { margin: 0 0 8px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+    footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--rule);
+      color: var(--soft);
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 16px; }
+      h1 { font-size: 32px; }
+      .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">ISSUE-0001 · ARCHITECTURE · 0.3.0-DRAFT</p>
+    <h1>Android 名片即時辨識與雙重本機保存架構</h1>
+    <p class="subtitle">離線 OCR 維持主流程，候選鎖定後不可被背景辨識覆寫。使用者完成時，原始名片影像和結構化聯絡人資料都在 App 私有範圍定稿；雲端 OCR 與 AI 只在明確同意後走受控 Gateway。</p>
+
+    <svg viewBox="0 0 1280 760" role="img" aria-labelledby="ar-issue-0001-v03-title ar-issue-0001-v03-desc">
+      <title id="ar-issue-0001-v03-title">Android 名片辨識與雙重本機保存架構</title>
+      <desc id="ar-issue-0001-v03-desc">架構圖呈現 Android 相機、即時 OCR、欄位鎖定、私有原始影像、Room SQLite、可選雲端 Gateway 與 Android Contacts 的資料流和信任邊界。</desc>
+      <defs>
+        <marker id="ar-issue-0001-v03-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+        </marker>
+        <marker id="ar-issue-0001-v03-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+        </marker>
+        <marker id="ar-issue-0001-v03-arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/>
+        </marker>
+      </defs>
+
+      <rect width="1280" height="760" fill="#f5f5f5"/>
+
+      <rect x="40" y="96" width="800" height="548" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.16)" stroke-width="0.8"/>
+      <rect x="64" y="100" width="176" height="24" rx="4" fill="#f5f5f5"/>
+      <text x="72" y="116" fill="#4f5d75" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans TC', sans-serif">ANDROID APP · PRIVATE</text>
+
+      <rect x="880" y="96" width="360" height="320" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.16)" stroke-width="0.8"/>
+      <rect x="904" y="100" width="192" height="24" rx="4" fill="#f5f5f5"/>
+      <text x="912" y="116" fill="#4f5d75" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans TC', sans-serif">OPTIONAL EXTERNAL SERVICES</text>
+
+      <rect x="880" y="480" width="360" height="152" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.16)" stroke-width="0.8"/>
+      <rect x="904" y="484" width="168" height="24" rx="4" fill="#f5f5f5"/>
+      <text x="912" y="500" fill="#4f5d75" font-size="12" font-weight="500" font-family="'Geist', 'Noto Sans TC', sans-serif">ANDROID SYSTEM CONTACTS</text>
+
+      <!-- connectors: drawn before nodes -->
+      <path d="M 280,248 H 340" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="280" y="220" width="60" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="310" y="232" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">最新影格</text>
+
+      <path d="M 560,248 H 620" fill="none" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow-accent)"/>
+
+      <path d="M 680,296 V 352 Q 680,360 672,360 H 188 Q 180,360 180,368 V 416" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="392" y="324" width="96" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="440" y="336" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">完成時原圖</text>
+
+      <path d="M 760,296 V 376 Q 760,384 752,384 H 458 Q 450,384 450,392 V 416" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="560" y="356" width="80" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="600" y="368" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">完成交易</text>
+
+      <path d="M 280,464 H 340" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="284" y="436" width="52" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="310" y="448" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">資產索引</text>
+
+      <path d="M 560,464 H 620" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="564" y="436" width="52" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="590" y="448" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">本機查詢</text>
+
+      <path d="M 820,248 H 872 Q 880,248 880,240 V 216 Q 880,208 888,208 H 940" fill="none" stroke="#2e5aa8" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#ar-issue-0001-v03-arrow-link)"/>
+      <rect x="828" y="220" width="52" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="854" y="232" fill="#2e5aa8" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">同意後</text>
+
+      <path d="M 1060,256 V 300" fill="none" stroke="#2e5aa8" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#ar-issue-0001-v03-arrow-link)"/>
+      <rect x="1072" y="264" width="88" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="1116" y="276" fill="#2e5aa8" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">受控供應商</text>
+
+      <path d="M 820,480 H 880 Q 888,480 888,488 V 544 Q 888,552 896,552 H 940" fill="none" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#ar-issue-0001-v03-arrow)"/>
+      <rect x="900" y="516" width="32" height="16" rx="4" fill="#f5f5f5"/>
+      <text x="916" y="528" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">匯出</text>
+
+      <!-- Android App nodes -->
+      <rect x="80" y="200" width="200" height="96" rx="8" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <rect x="96" y="216" width="48" height="16" rx="4" fill="transparent" stroke="rgba(122,131,153,0.60)" stroke-width="0.8"/>
+      <text x="120" y="228" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">INPUT</text>
+      <text x="180" y="256" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">CameraX 與對焦閘門</text>
+      <text x="180" y="280" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">preview · focus state</text>
+
+      <rect x="340" y="200" width="220" height="96" rx="8" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.2"/>
+      <rect x="356" y="216" width="48" height="16" rx="4" fill="transparent" stroke="rgba(235,108,54,0.60)" stroke-width="0.8"/>
+      <text x="380" y="228" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FOCAL</text>
+      <text x="450" y="256" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">即時 OCR 協調器</text>
+      <text x="450" y="280" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">one in-flight · generation</text>
+
+      <rect x="620" y="200" width="200" height="96" rx="8" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1.2"/>
+      <rect x="636" y="216" width="48" height="16" rx="4" fill="transparent" stroke="rgba(235,108,54,0.60)" stroke-width="0.8"/>
+      <text x="660" y="228" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">FOCAL</text>
+      <text x="720" y="252" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">草稿、鎖定與保存協調器</text>
+      <text x="720" y="276" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">live · locked · finalizer</text>
+
+      <rect x="80" y="416" width="200" height="96" rx="8" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="96" y="432" width="56" height="16" rx="4" fill="transparent" stroke="rgba(79,93,117,0.60)" stroke-width="0.8"/>
+      <text x="124" y="444" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">ASSET</text>
+      <text x="180" y="472" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">原始名片影像資產</text>
+      <text x="180" y="496" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">private files · pending → ready</text>
+
+      <rect x="340" y="416" width="220" height="96" rx="8" fill="rgba(45,49,66,0.05)" stroke="#4f5d75" stroke-width="1"/>
+      <rect x="356" y="432" width="48" height="16" rx="4" fill="transparent" stroke="rgba(79,93,117,0.60)" stroke-width="0.8"/>
+      <text x="380" y="444" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">STORE</text>
+      <text x="450" y="472" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">Room / SQLite</text>
+      <text x="450" y="496" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">contacts · values · asset metadata</text>
+
+      <rect x="620" y="416" width="200" height="96" rx="8" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <rect x="636" y="432" width="48" height="16" rx="4" fill="transparent" stroke="rgba(45,49,66,0.50)" stroke-width="0.8"/>
+      <text x="660" y="444" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">QUERY</text>
+      <text x="720" y="472" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">本機查詢模組</text>
+      <text x="720" y="496" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">repository · DAO · asset service</text>
+
+      <!-- Optional external nodes -->
+      <rect x="940" y="160" width="240" height="96" rx="8" fill="rgba(235,108,54,0.05)" stroke="rgba(235,108,54,0.70)" stroke-width="1" stroke-dasharray="4,4"/>
+      <rect x="956" y="176" width="56" height="16" rx="4" fill="transparent" stroke="rgba(235,108,54,0.50)" stroke-width="0.8"/>
+      <text x="984" y="188" fill="#eb6c36" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SECURE</text>
+      <text x="1060" y="216" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">Provider Gateway</text>
+      <text x="1060" y="240" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">consent · keys · limits</text>
+
+      <rect x="940" y="300" width="240" height="96" rx="8" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="956" y="316" width="64" height="16" rx="4" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="988" y="328" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">EXTERNAL</text>
+      <text x="1060" y="356" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">雲端 OCR / AI</text>
+      <text x="1060" y="380" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">selected provider only</text>
+
+      <rect x="940" y="504" width="240" height="96" rx="8" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <rect x="956" y="520" width="64" height="16" rx="4" fill="transparent" stroke="rgba(45,49,66,0.30)" stroke-width="0.8"/>
+      <text x="988" y="532" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle">SYSTEM</text>
+      <text x="1060" y="560" fill="#2d3142" font-size="16" font-weight="600" font-family="'Geist', 'Noto Sans TC', sans-serif" text-anchor="middle">Android Contacts</text>
+      <text x="1060" y="584" fill="#4f5d75" font-size="12" font-family="'Geist Mono', monospace" text-anchor="middle">user confirms export</text>
+
+      <line x1="40" y1="684" x2="1240" y2="684" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+      <text x="40" y="716" fill="#4f5d75" font-size="12" font-family="'Geist', 'Noto Sans TC', sans-serif">圖例：橘色為即時辨識、鎖定與保存核心；虛線為使用者同意後的可選流程；完成資料須同時有原始影像與 SQLite 結構化記錄。</text>
+    </svg>
+
+    <section class="summary" aria-label="架構摘要">
+      <article class="card">
+        <h2>即時但不覆寫</h2>
+        <p>相機只交付最新影格；候選帶有掃描世代與鎖定狀態。使用者一旦鎖定文字，晚到的 OCR 結果沒有權限覆寫。</p>
+      </article>
+      <article class="card">
+        <h2>影像與欄位一起完成</h2>
+        <p>原始名片影像置於 App 私有檔案區，Room 保存聯絡人及資產 metadata。Pending 到 Ready 的定稿流程避免一般查詢讀到半筆資料。</p>
+      </article>
+      <article class="card">
+        <h2>外部服務仍需同意</h2>
+        <p>雲端 OCR 與 AI 需逐次同意，並由 Gateway 保存服務端金鑰與用量規則；本機已保存影像不會自動離開手機。</p>
+      </article>
+    </section>
+
+    <footer>Architecture draft · default light profile · static document-wide view · 9 nodes / 9 flows</footer>
+  </main>
+</body>
+</html>
