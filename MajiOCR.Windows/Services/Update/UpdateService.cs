@@ -25,7 +25,8 @@ public sealed class UpdateService
     {
         _basePath = !string.IsNullOrWhiteSpace(basePath)
             ? basePath
-            : AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            : (!string.IsNullOrWhiteSpace(Environment.ProcessPath) ? Path.GetDirectoryName(Environment.ProcessPath) : null)
+              ?? AppDomain.CurrentDomain.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
     }
 
     public string BasePath => _basePath;
@@ -724,7 +725,19 @@ try {
                 New-Item -ItemType Directory -Force -Path $parentDir | Out-Null
             }
             if ($_.Name -notin $protectedFiles) {
-                Copy-Item -LiteralPath $_.FullName -Destination $targetFile -Force
+                $copied = $false
+                for ($retry = 1; $retry -le 10; $retry++) {
+                    try {
+                        Copy-Item -LiteralPath $_.FullName -Destination $targetFile -Force -ErrorAction Stop
+                        $copied = $true
+                        break
+                    } catch {
+                        Start-Sleep -Seconds 1
+                    }
+                }
+                if (-not $copied) {
+                    throw ""無法覆寫檔案 ($targetFile)：可能被系統或其他程序鎖定。""
+                }
             }
         }
     }
