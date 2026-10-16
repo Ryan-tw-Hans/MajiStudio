@@ -1,0 +1,131 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.22000.0</TargetPlatformMinVersion>
+    <RootNamespace>MajiOCR_Windows</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- Windows unpackaged and self-contained -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+
+    <!-- Single file deployment with all content for self-extract -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
+    <DefineConstants>DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+
+    <!-- Candidate Version -->
+    <Version>0.1.0-beta.24</Version>
+    <AssemblyVersion>0.1.0.24</AssemblyVersion>
+    <FileVersion>0.1.0.24</FileVersion>
+    <InformationalVersion>0.1.0-beta.24</InformationalVersion>
+    <Product>MajiOCR.Windows</Product>
+    <Company>MajiOCR</Company>
+    <Description>Windows 原生離線名片辨識與固定欄位管理 (0.1.0-beta.24 支援 iOS/iPhone PWA 雲端一鍵部署至 Vercel 與 SQLCipher-AES256 解密查詢)</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Logo.png" LogicalName="MajiOCR.Branding.Logo" />
+    <EmbeddedResource Include="..\CHANGELOG.txt" LogicalName="MajiOCR.CHANGELOG.txt" />
+    <EmbeddedResource Include="..\MajiOCR.Web\index.html" LogicalName="MajiOCR.Web.index.html" />
+    <EmbeddedResource Include="..\MajiOCR.Web\styles.css" LogicalName="MajiOCR.Web.styles.css" />
+    <EmbeddedResource Include="..\MajiOCR.Web\manifest.webmanifest" LogicalName="MajiOCR.Web.manifest.webmanifest" />
+    <EmbeddedResource Include="..\MajiOCR.Web\icon.svg" LogicalName="MajiOCR.Web.icon.svg" />
+    <EmbeddedResource Include="..\MajiOCR.Web\sw.js" LogicalName="MajiOCR.Web.sw.js" />
+    <EmbeddedResource Include="..\MajiOCR.Web\js\config.js" LogicalName="MajiOCR.Web.js.config.js" />
+    <EmbeddedResource Include="..\MajiOCR.Web\js\zip-reader.js" LogicalName="MajiOCR.Web.js.zip-reader.js" />
+    <EmbeddedResource Include="..\MajiOCR.Web\js\sqlcipher-decryptor.js" LogicalName="MajiOCR.Web.js.sqlcipher-decryptor.js" />
+    <EmbeddedResource Include="..\MajiOCR.Web\js\sqlite-parser.js" LogicalName="MajiOCR.Web.js.sqlite-parser.js" />
+    <EmbeddedResource Include="..\MajiOCR.Web\js\app.js" LogicalName="MajiOCR.Web.js.app.js" />
+    <None Include="..\CHANGELOG.txt">
+      <Link>CHANGELOG.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </None>
+    <EmbeddedResource Include="Assets\GoogleGuide\step1_create_oauth.png" LogicalName="MajiOCR.Guide.Step1" />
+    <EmbeddedResource Include="Assets\GoogleGuide\step2_select_desktop.png" LogicalName="MajiOCR.Guide.Step2" />
+    <EmbeddedResource Include="Assets\GoogleGuide\step3_copy_client_id.png" LogicalName="MajiOCR.Guide.Step3" />
+    <Content Include="Assets\GoogleGuide\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-48_altform-lightunplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\AppIcon.ico" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <!--
+    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
+    Tools extension to be activated for this project even if the Windows App SDK Nuget
+    package has not yet been restored.
+  -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup>
+
+  <!--
+    Microsoft.Windows.SDK.BuildTools.WinApp adds first-class support for
+    `dotnet run` on packaged WinUI apps: it hooks the .NET CLI Run target to
+    register a debug identity via the winapp CLI and launch the app with
+    package identity (AUMID).
+    Set <EnableWinAppRunSupport>false</EnableWinAppRunSupport> in a
+    <PropertyGroup> above to opt out.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.5.1" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="0.7.0" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.22" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.10" />
+  </ItemGroup>
+
+  <!--
+    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
+    Explorer "Package and Publish" context menu entry to be enabled for this project even if
+    the Windows App SDK Nuget package has not yet been restored.
+  -->
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="tessdata\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="DefaultUpdateSettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Publish Properties -->
+  <PropertyGroup>
+    <PublishReadyToRun>False</PublishReadyToRun>
+    <PublishTrimmed>False</PublishTrimmed>
+  </PropertyGroup>
+</Project>

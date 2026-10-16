@@ -1,0 +1,54 @@
+﻿{
+  "Timestamp": "2026-10-16T11:50:25.9238376Z",
+  "Version": "0.1.0-beta.24",
+  "IssueId": "ISSUE-0044",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 6,
+  "PassCount": 6,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "T1-SQLCIPHER-DECRYPT-PARITY",
+      "Description": "\u9A57\u8B49 SQLCipher-AES256 \u52A0\u5BC6\u8CC7\u6599\u5EAB\u53EF\u7531 SQLCipher 4 \u5206\u9801\u89E3\u5BC6\u5668 100% \u9084\u539F\u70BA\u6A19\u6E96 SQLite \u4E26\u7121\u5BC6\u78BC\u8B80\u51FA\u540D\u7247\u8207\u6A19\u7C64",
+      "Passed": true,
+      "Details": "rawEncrypted=True, decPlain=True, reserve=80, quickCheck=ok, contacts=1, name=\u738B\u5927\u660E, tag=VIP\u5BA2\u6236",
+      "LatencyMs": 2588
+    },
+    {
+      "TestId": "T2-SQLCIPHER-WRONG-PASSWORD-REJECT",
+      "Description": "\u9A57\u8B49\u8F38\u5165\u932F\u8AA4\u4E3B\u5BC6\u78BC\u6216\u7A7A\u5BC6\u78BC\u6642\uFF0CPage 1 HMAC-SHA512 \u7ACB\u5373\u6514\u622A\u4E26\u56DE\u50B3\u660E\u78BA\u932F\u8AA4",
+      "Passed": true,
+      "Details": "wrongRejected=True (INVALID_PASSWORD: \u4E3B\u5BC6\u78BC\u932F\u8AA4\u6216\u8CC7\u6599\u5EAB\u7121\u6CD5\u89E3\u5BC6 (SQLCipher Page 1 HMAC \u9A57\u8B49\u5931\u6557)\u3002), emptyRejected=True",
+      "LatencyMs": 251
+    },
+    {
+      "TestId": "T3-EMBEDDED-PWA-ASSETS-AND-PAYLOAD",
+      "Description": "\u9A57\u8B49\u5167\u5D4C MajiOCR.Web 10 \u9805\u975C\u614B\u8CC7\u7522\u9F4A\u5168\u3001Google Client ID \u6B63\u78BA\u6CE8\u5165\u4E14\u7D55\u4E0D\u593E\u5E36\u672C\u6A5F SQLite \u8CC7\u6599\u5EAB",
+      "Passed": true,
+      "Details": "normalized=my-majiocr-ios-app-2026, filesCount=10, hasAllCoreFiles=True, noSqliteIncluded=True, clientIdInjected=True",
+      "LatencyMs": 32
+    },
+    {
+      "TestId": "T4-VERCEL-REST-API-DEPLOY-FLOW",
+      "Description": "\u9A57\u8B49 VercelDeploymentService \u6B63\u78BA\u57F7\u884C\u5E33\u865F\u9A57\u8B49\u3001\u975C\u614B\u5305\u90E8\u7F72\u3001SSO \u516C\u958B\u6B0A\u9650\u8A2D\u5B9A\u53CA 401 \u932F\u8AA4\u63D0\u793A",
+      "Passed": true,
+      "Details": "unauthBlocked=True, okSuccess=True, url=https://majiocr-ios-pwa.vercel.app, calls=(1,1,1)",
+      "LatencyMs": 15
+    },
+    {
+      "TestId": "T5-QRCODE-AND-SETTINGS-PERSISTENCE",
+      "Description": "\u9A57\u8B49\u672C\u6A5F QR Code \u7522\u751F\u5668\u901A\u904E ISO/IEC 18004 Format BCH \u8207 Reed-Solomon \u89E3\u78BC\u9084\u539F\u7DB2\u5740\u4E14 AppSettings \u6B63\u78BA\u6301\u4E45\u5316",
+      "Passed": true,
+      "Details": "qrDimension=29x29, decoded1=https://majiocr-ios-pwa.vercel.app, decoded2=https://majiocr-pwa-demo.example.com, bmpBytes=197190, err=",
+      "LatencyMs": 60
+    },
+    {
+      "TestId": "T6-BACKUP-ZIP-DUAL-PIPELINE-COMPATIBILITY",
+      "Description": "\u9A57\u8B49\u52A0\u5BC6\u5099\u4EFD ZIP \u5167\u542B manifest.json\u3001SQLCipher contacts.sqlite3 \u8207 card-images/ \u4E14\u53EF\u5B8C\u6574\u89E3\u58D3\u8207\u89E3\u5BC6",
+      "Passed": true,
+      "Details": "isProtected=True, algo=SQLCipher-AES256, contacts=1, hasImages=True, decryptedValid=True",
+      "LatencyMs": 1060
+    }
+  ]
+}
