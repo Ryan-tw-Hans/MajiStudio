@@ -15,31 +15,31 @@
 ## 🌟 核心特色與架構
 
 ```mermaid
-flowchart LR
-    subgraph Desktop ["🖥️ Windows 桌面端 (MajiOCR.Windows)"]
-        WinUI["WinUI 3 現代化介面"]
-        Tess["內嵌 Tesseract 5 離線多語模型"]
-        SQLCipher["SQLCipher 4 AES-256 加密資料庫"]
-        DeployWizard["Vercel 一鍵部署精靈"]
+graph TD
+    subgraph Desktop [Windows 桌面端 MajiOCR.Windows]
+        WinUI[WinUI 3 現代化介面]
+        Tess[內嵌 Tesseract 5 離線多語模型]
+        SQLCipher[SQLCipher 4 AES-256 加密資料庫]
+        DeployWizard[Vercel 一鍵部署精靈]
     end
 
-    subgraph Cloud ["☁️ 雲端傳輸（純加密檔案儲存）"]
-        GDrive["個人 Google Drive (MajiOCR_Backups)"]
-        Vercel["個人 Vercel 靜態 PWA Hosting"]
+    subgraph Cloud [雲端傳輸 - 純加密檔案儲存]
+        GDrive[個人 Google Drive MajiOCR_Backups]
+        Vercel[個人 Vercel 靜態 PWA Hosting]
     end
 
-    subgraph Mobile ["📱 行動端 (MajiOCR.Web & Android)"]
-        PWA["iOS / iPhone PWA (純前端 WebCrypto 解密)"]
-        AndroidApp["原生 Android App (相機掃描)"]
+    subgraph Mobile [行動端 MajiOCR.Web 與 Android]
+        PWA[iOS / iPhone PWA 純前端 WebCrypto 解密]
+        AndroidApp[原生 Android App 相機掃描]
     end
 
     WinUI --> Tess
     WinUI --> SQLCipher
-    SQLCipher -- "加密備份封裝 (*.zip)" --> GDrive
-    DeployWizard -- "直推純靜態網頁" --> Vercel
-    Vercel -. "Safari 加入主畫面" .-> PWA
-    GDrive -- "下載加密備份" --> PWA
-    PWA -- "本機 WebCrypto 解密" --> IndexedDB[("本機 IndexedDB (離線可查)")]
+    SQLCipher -->|加密備份封裝 zip| GDrive
+    DeployWizard -->|直推純靜態網頁| Vercel
+    Vercel -.->|Safari 加入主畫面| PWA
+    GDrive -->|下載加密備份| PWA
+    PWA -->|本機 WebCrypto 解密| IndexedDB[本機 IndexedDB 離線可查]
 ```
 
 ---

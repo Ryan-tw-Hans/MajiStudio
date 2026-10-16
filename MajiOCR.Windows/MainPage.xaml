@@ -23,7 +23,7 @@
             <AppBarButton x:Name="PickImageButton" Icon="OpenFile" Label="選取圖片" Click="OnPickImageClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="選取圖片檔案" />
             <AppBarButton x:Name="PasteImageButton" Icon="Paste" Label="貼上圖片" Click="OnPasteImageClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="自剪貼簿貼上圖片">
                 <AppBarButton.KeyboardAccelerators>
-                    <KeyboardAccelerator Key="V" Modifiers="Control" />
+                    <KeyboardAccelerator Key="V" Modifiers="Control" Invoked="OnPasteKeyboardAcceleratorInvoked" />
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
             <AppBarSeparator />

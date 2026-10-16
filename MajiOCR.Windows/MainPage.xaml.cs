@@ -1205,7 +1205,53 @@ public sealed partial class MainPage : Page
         }
     }
 
+    public static bool IsTextInputControl(object? element)
+    {
+        if (element == null) return false;
+
+        if (element is TextBox or RichEditBox or PasswordBox or AutoSuggestBox)
+        {
+            return true;
+        }
+
+        if (element is DependencyObject depObj)
+        {
+            DependencyObject? current = depObj;
+            while (current != null)
+            {
+                if (current is TextBox or RichEditBox or PasswordBox or AutoSuggestBox)
+                {
+                    return true;
+                }
+                current = VisualTreeHelper.GetParent(current);
+            }
+        }
+
+        return false;
+    }
+
+    private async void OnPasteKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        var focused = FocusManager.GetFocusedElement(this.XamlRoot);
+        if (IsTextInputControl(focused))
+        {
+            // 焦點位於文字輸入/編輯欄位中（TextBox 等），使用者正在進行文字貼上操作
+            // 標記 Handled = true 阻止該快捷鍵觸發「貼上圖片」按鈕邏輯與提示彈窗
+            args.Handled = true;
+            return;
+        }
+
+        // 焦點非文字編輯控制項，由快捷鍵執行貼上圖片
+        args.Handled = true;
+        await ExecutePasteImageAsync();
+    }
+
     private async void OnPasteImageClicked(object sender, RoutedEventArgs e)
+    {
+        await ExecutePasteImageAsync();
+    }
+
+    private async Task ExecutePasteImageAsync()
     {
         if (!ViewModel.CanRunActions || ViewModel.IsSaving || ViewModel.IsBusy) return;
 

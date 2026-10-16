@@ -1,0 +1,40 @@
+﻿{
+  "Timestamp": "2026-10-16T15:40:31.4678985Z",
+  "Version": "0.1.0-beta.25",
+  "IssueId": "ISSUE-0045",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 4,
+  "PassCount": 4,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "TC-01",
+      "Description": "\u9A57\u8B49 IsTextInputControl \u8B58\u5225\u6587\u5B57\u7DE8\u8F2F\u5143\u4EF6\u985E\u578B\u8207\u975E\u6587\u5B57\u5143\u4EF6",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 16
+    },
+    {
+      "TestId": "TC-02",
+      "Description": "\u9A57\u8B49 MainPage \u4E2D\u5DF2\u5BE6\u4F5C OnPasteKeyboardAcceleratorInvoked \u4E14 XAML \u5DF2\u7D81\u5B9A",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "TC-03",
+      "Description": "\u9A57\u8B49 README.md \u4E2D Mermaid \u5716\u8868\u8A9E\u6CD5\u76F8\u5BB9 GitHub \u89E3\u6790\u5668 (\u6D88\u9664 reading \u0027render\u0027 \u7570\u5E38)",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 27
+    },
+    {
+      "TestId": "TC-04",
+      "Description": "\u9A57\u8B49 VERSION.txt\u3001CHANGELOG.txt \u8207 MajiOCR.Windows.csproj \u7248\u672C\u865F\u540C\u6B65\u81F3 0.1.0.25",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 1
+    }
+  ]
+}

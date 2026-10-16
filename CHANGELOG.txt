@@ -1,6 +1,10 @@
 # MajiOCR.Windows 變更紀錄
 
-## [0.1.0.24] - 2026-10-16
+## [0.1.0.25] - 2026-10-16
+- 修復名片草稿資料欄位（TextBox 等輸入框）使用 Ctrl+V 貼上文字時，誤觸發全域「貼上圖片」快捷鍵並彈出未偵測到有效圖片提示的問題 (ISSUE-0045)
+- 新增鍵盤快捷鍵焦點判斷與攔截處理（OnPasteKeyboardAcceleratorInvoked），嚴密區隔文字編輯與圖片載入作業
+- 修復 GitHub 首頁 README.md 中 Mermaid 流程圖語法相容性問題，消除 rich display 渲染異常 (reading 'render')
+
 - 新增 iOS / iPhone (iPhone X / iOS 16+) 跨平台行動網頁版 PWA (MajiOCR.Web v0.1.0-beta.1) 並內嵌於 Windows 單一執行檔中 (ISSUE-0044)
 - 新增「📱 部署 iOS / Web 雲端版 (Vercel)...」3 步驟一鍵部署精靈：引導註冊/登入 Vercel 並取得 Token，自動透過 Vercel REST API 建立專案並上傳 PWA 靜態包，自動產生 iPhone 掃描安裝 QR Code
 - iPhone PWA 支援「Google Drive 雲端直接下載」與「iPhone 檔案 App 選取備份包 (.zip/.sqlite3)」雙管道載入
