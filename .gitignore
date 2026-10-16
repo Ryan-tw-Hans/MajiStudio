@@ -1,0 +1,69 @@
+# ==========================================
+# MajiOCR 專案 Git 忽略規則 (.gitignore)
+# ==========================================
+
+# 1. 敏感個資與本機資料庫 (嚴格禁止上傳)
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+card_manager.db*
+contacts.sqlite3*
+
+# 2. 名片實際圖片與樣本 (真實個資與測試圖片)
+card-images/
+CardImages/
+*/card-images/
+*/CardImages/
+sample/
+
+# 3. 認證金鑰、憑證與個人設定檔
+google_oauth_config.json
+*token*.json
+*secret*.json
+publish-targets.json
+UpdateSettings.json
+appsettings.Development.json
+*.user
+*.suo
+
+# 4. .NET / Visual Studio 建置輸出與暫存
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+ARM64/
+[Bb]in/
+[Oo]bj/
+*.pdb
+*.msix
+*.appx
+*.appxbundle
+*.msixbundle
+*.log
+logs/
+
+# 5. 發布產物、二進位大型檔案與暫存封裝
+publish/MajiOCR.Windows/MajiOCR.Windows.exe
+publish/MajiOCR.Windows/MajiOCR.Windows.zip
+publish/MajiOCR.Windows/versions/
+publish/MajiOCR.Windows/.backup_snapshot/
+publish/MajiOCR/
+*.apk
+*.zip
+*.7z
+*.rar
+tmp/
+.pending/
+
+# 6. 本機工具鏈執行檔 (例如 rclone 二進位檔)
+tools/rclone/
+*.exe
+
+# 7. Agent 本機控制資訊與工作階段暫存 (依 AGENTS.md 規範隔離)
+AgentUse/
+.agents/
+.gemini/
+agent-workflow/
