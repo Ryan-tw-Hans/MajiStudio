@@ -1,0 +1,77 @@
+name: Build and Release MajiOCR.Windows
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name to release (e.g., v0.1.0.25)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          include-prerelease: true
+
+      - name: Restore dependencies
+        run: dotnet restore MajiOCR.Windows/MajiOCR.Windows.csproj
+
+      - name: Publish MajiOCR.Windows Single-File
+        run: |
+          dotnet publish MajiOCR.Windows/MajiOCR.Windows.csproj `
+            -c Release `
+            -r win-x64 `
+            -p:Platform=x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeAllContentForSelfExtract=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o publish_output
+
+      - name: Package Release ZIP
+        shell: powershell
+        run: |
+          Compress-Archive -Path "publish_output/MajiOCR.Windows.exe" -DestinationPath "MajiOCR.Windows.zip" -Force
+          Get-Item MajiOCR.Windows.zip | Select-Object Name, Length, LastWriteTime
+
+      - name: Determine Release Tag
+        id: get_tag
+        shell: powershell
+        run: |
+          $tag = "${{ github.event.inputs.tag_name }}"
+          if (-not $tag) {
+            $tag = "${{ github.ref_name }}"
+          }
+          if (-not $tag) {
+            $tag = "v0.1.0.25"
+          }
+          Write-Output "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Create or Update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: MajiOCR.Windows ${{ steps.get_tag.outputs.tag }}
+          files: MajiOCR.Windows.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
