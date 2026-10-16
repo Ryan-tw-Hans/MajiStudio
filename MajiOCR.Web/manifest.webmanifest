@@ -1,0 +1,19 @@
+{
+  "name": "MajiOCR 名片管理 (iOS / Web)",
+  "short_name": "MajiOCR",
+  "description": "MajiOCR 跨平台離線名片通訊錄、Google Drive 加密備份還原與複合查詢 (支援 iPhone X / iOS 16+)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F2F4F8",
+  "theme_color": "#0F6CBD",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

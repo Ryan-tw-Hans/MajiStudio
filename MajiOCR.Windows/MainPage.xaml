@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="MajiOCR_Windows.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:MajiOCR_Windows.Models"
+    xmlns:converters="using:MajiOCR_Windows.Converters"
+    SizeChanged="OnPageSizeChanged"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <converters:BoolToBrushConverter x:Key="BoolToBrushConverter" />
+        <converters:DraftStatusToBrushConverter x:Key="DraftStatusToBrushConverter" />
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+    </Page.Resources>
+
+    <Grid x:Name="RootPageGrid" RowDefinitions="Auto,Auto,*,Auto" Margin="16,0,16,16" HorizontalAlignment="Stretch">
+        <!-- Top Toolbar / CommandBar -->
+        <CommandBar Grid.Row="0" x:Name="TopCommandBar" DefaultLabelPosition="Right" IsDynamicOverflowEnabled="True" HorizontalAlignment="Stretch" Background="Transparent">
+            <!-- 核心功能快捷按鈕 -->
+            <AppBarButton x:Name="PickImageButton" Icon="OpenFile" Label="選取圖片" Click="OnPickImageClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="選取圖片檔案" />
+            <AppBarButton x:Name="PasteImageButton" Icon="Paste" Label="貼上圖片" Click="OnPasteImageClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="自剪貼簿貼上圖片">
+                <AppBarButton.KeyboardAccelerators>
+                    <KeyboardAccelerator Key="V" Modifiers="Control" />
+                </AppBarButton.KeyboardAccelerators>
+            </AppBarButton>
+            <AppBarSeparator />
+            <AppBarButton x:Name="FullOcrButton" Icon="Character" Label="整圖辨識" Click="OnFullOcrClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="執行多語系整圖辨識" />
+            <AppBarButton x:Name="RegionOcrButton" Icon="Crop" Label="框選辨識" Click="OnRegionOcrClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" AutomationProperties.Name="辨識框選之局部區域" />
+            <AppBarSeparator />
+            <AppBarButton x:Name="SaveDraftButton" Icon="Save" Label="儲存名片" Click="OnSaveDraftClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" AutomationProperties.Name="儲存名片" />
+            <AppBarButton x:Name="SavedCardsButton" Icon="Contact" Label="已存名片" Click="OnSavedCardsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" AutomationProperties.Name="已存名片清單" />
+            <AppBarButton x:Name="CancelOcrButton" Icon="Cancel" Label="取消" Click="OnCancelOcrClicked" Visibility="Collapsed" AutomationProperties.Name="取消目前辨識" />
+
+            <!-- 選單項目 (整合備份、還原、匯出、管理標籤、系統設定) -->
+            <CommandBar.SecondaryCommands>
+                <AppBarButton Icon="SaveLocal" Label="備份名片資料 (本機/雲端)..." Click="OnBackupClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Download" Label="還原名片資料 (本機/雲端)..." Click="OnRestoreClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton x:Name="DeployVercelMenuButton" Icon="Globe" Label="部署 iOS / Web 雲端版 (Vercel)..." Click="OnDeployVercelClicked" />
+                <AppBarSeparator />
+                <AppBarButton Icon="OpenFile" Label="匯出至 Outlook CSV (*.csv)" Click="OnExportOutlookClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="OpenFile" Label="匯出至 Google 聯絡人 (*.csv)" Click="OnExportGoogleClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Contact" Label="匯出至通用名片檔 (*.vcf)" Click="OnExportVCardClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Sync" Label="同步至 Google 聯絡人 (通訊錄)" Click="OnSyncGoogleContactsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarSeparator />
+                <AppBarButton Icon="Tag" Label="管理分類標籤" Click="OnManageTagsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton x:Name="AddCustomFieldButton" Icon="Add" Label="新增自訂欄位" Click="OnAddCustomFieldClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" />
+                <AppBarButton x:Name="ManageCustomFieldsButton" Icon="Manage" Label="管理自訂名稱定義" Click="OnManageCustomFieldsClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" />
+                <AppBarButton x:Name="BlankDraftButton" Icon="Clear" Label="建立空白草稿" Click="OnBlankDraftClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" />
+                <AppBarSeparator />
+                <AppBarButton Icon="Permissions" Label="安全與密碼保護" Click="OnSecuritySettingsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Refresh" Label="檢查軟體更新" Click="OnCheckUpdateClicked" />
+                <AppBarButton Icon="Help" Label="關於 MajiOCR.Windows" Click="OnAboutClicked" />
+            </CommandBar.SecondaryCommands>
+        </CommandBar>
+
+        <!-- OCR 辨識語系與畫面控制卡片列 -->
+        <Border Grid.Row="1" x:Name="OcrControlBarContainer" Margin="0,2,0,10" Padding="12,6"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1" CornerRadius="8">
+            <ScrollViewer x:Name="OcrControlScrollViewer"
+                          HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Enabled"
+                          VerticalScrollBarVisibility="Disabled" VerticalScrollMode="Disabled">
+                <StackPanel x:Name="OcrControlBar" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="整體辨識語系" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <ComboBox x:Name="FullOcrLangComboBox"
+                                  ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneTime}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedFullOcrLanguage, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName" FontSize="12" Padding="8,4" MinWidth="110"
+                                  IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}"
+                                  AutomationProperties.Name="整體辨識語系選擇" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <TextBlock Text="局部辨識語系" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <ComboBox x:Name="PartialOcrLangComboBox"
+                                  ItemsSource="{x:Bind ViewModel.LanguageOptions, Mode=OneTime}"
+                                  SelectedItem="{x:Bind ViewModel.SelectedPartialOcrLanguage, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName" FontSize="12" Padding="8,4" MinWidth="110"
+                                  IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}"
+                                  AutomationProperties.Name="局部辨識語系選擇" />
+                    </StackPanel>
+
+                    <Rectangle Width="1" Height="20" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" VerticalAlignment="Center" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button x:Name="FitToWindowBtn" Content="適合大小" Click="OnFitToWindowClicked"
+                                Padding="10,5" FontSize="12" VerticalAlignment="Center"
+                                AutomationProperties.Name="適合大小，重設為適合視窗比例" />
+                        <Button x:Name="ExecuteRegionOcrBtn" Content="局部再辨識" Click="OnRegionOcrClicked"
+                                Padding="10,5" FontSize="12" Style="{ThemeResource AccentButtonStyle}"
+                                IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}"
+                                VerticalAlignment="Center" AutomationProperties.Name="執行局部再辨識" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!-- Main Content Area: Responsive Grid (Side-by-side or Stacked for narrow windows) -->
+        <ScrollViewer Grid.Row="2" x:Name="MainContentScrollViewer"
+                      VerticalScrollBarVisibility="Disabled"
+                      VerticalScrollMode="Disabled"
+                      HorizontalScrollBarVisibility="Disabled"
+                      HorizontalScrollMode="Disabled"
+                      HorizontalAlignment="Stretch">
+            <Grid x:Name="MainContentGrid" ColumnSpacing="16" RowSpacing="16" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition x:Name="LeftColumnDef" Width="*" MinWidth="280" />
+                    <ColumnDefinition x:Name="RightColumnDef" Width="400" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition x:Name="TopRowDef" Height="*" />
+                    <RowDefinition x:Name="BottomRowDef" Height="0" />
+                </Grid.RowDefinitions>
+
+                <!-- LEFT COLUMN SCROLLVIEWER / PANEL: Image Workspace & Geometry Controls -->
+                <ScrollViewer x:Name="LeftColumnScrollViewer" Grid.Row="0" Grid.Column="0"
+                              HorizontalAlignment="Stretch"
+                              VerticalScrollBarVisibility="Disabled"
+                              VerticalScrollMode="Disabled"
+                              HorizontalScrollBarVisibility="Disabled"
+                              HorizontalScrollMode="Disabled">
+                    <Grid x:Name="LeftColumnPanel" RowDefinitions="*,Auto">
+                <!-- Image Viewport with Overlay Canvas (Maximum Available Height, No Candidate List Below) -->
+                <Border Grid.Row="0" x:Name="ImageBorder" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Background="{ThemeResource LayerFillColorDefaultBrush}" MinHeight="240">
+                    <Canvas x:Name="WorkspaceCanvas" Background="Transparent" IsTabStop="True"
+                            SizeChanged="OnWorkspaceSizeChanged"
+                            PointerPressed="OnWorkspacePointerPressed"
+                            PointerMoved="OnWorkspacePointerMoved"
+                            PointerReleased="OnWorkspacePointerReleased"
+                            PointerCanceled="OnWorkspacePointerCanceled"
+                            PointerCaptureLost="OnWorkspacePointerCaptureLost"
+                            PointerWheelChanged="OnWorkspacePointerWheelChanged"
+                            KeyDown="OnWorkspaceKeyDown">
+                        <!-- Transformed Rendered Image -->
+                        <Image x:Name="PreviewImage" Stretch="Fill" Visibility="Collapsed" />
+
+                        <!-- Visual ROI Selection Rectangle Overlay -->
+                        <Rectangle x:Name="RoiRectangle"
+                                   Stroke="{ThemeResource AccentFillColorDefaultBrush}"
+                                   StrokeThickness="2"
+                                   StrokeDashArray="2 2"
+                                   Fill="#330078D4"
+                                   Visibility="Collapsed" />
+
+                        <!-- Placeholder when no image loaded -->
+                        <StackPanel x:Name="NoImagePlaceholder" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="8" Canvas.Left="20" Canvas.Top="30">
+                            <FontIcon Glyph="&#xE8B9;" FontSize="48" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="點選上方「選取圖片」或按 Ctrl+V 貼上名片圖片" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
+                            <TextBlock Text="支援 PNG、JPEG、BMP 格式 (多語系離線 OCR)" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Canvas>
+                </Border>
+
+                <!-- Selection summary remains below the image; all OCR controls share the top row. -->
+                <TextBlock x:Name="RegionCoordsDisplayText" Grid.Row="1" Margin="0,8,0,0"
+                           Text="選區: 未框選 (在圖片上拖曳滑鼠)" FontSize="12"
+                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </ScrollViewer>
+
+            <!-- RIGHT COLUMN PANEL: Fixed 8 Fields, Custom Fields, and Collapsible 待分類 Area -->
+            <Border x:Name="RightColumnPanel" Grid.Row="0" Grid.Column="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="8" Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="14">
+                <Grid RowDefinitions="Auto,*">
+                    <!-- Draft Header -->
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,10">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Text="名片草稿" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Border x:Name="DraftStatusBadgeBorder" CornerRadius="4" Padding="6,2" VerticalAlignment="Center" Background="{ThemeResource SubtleFillColorSecondaryBrush}">
+                                <TextBlock x:Name="DraftStatusBadge" Text="未修改" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" x:Name="DraftRowsCountLabel" Text="0 筆草稿" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Button Content="+ 自訂欄位" FontSize="12" Padding="6,4" Click="OnAddCustomFieldClicked" AutomationProperties.Name="新增自訂欄位" />
+                            <Button Content="清空" FontSize="12" Padding="6,4" Click="OnClearDraftClicked" AutomationProperties.Name="清空所有草稿資料" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Scrollable Form with Fixed Fields + Custom Fields + 待分類 (RS-ISSUE-0008 OCR8-01, OCR8-02, OCR8-08) -->
+                    <ScrollViewer Grid.Row="1" x:Name="DraftScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled">
+                        <StackPanel Spacing="10" Padding="0,0,4,0">
+                            <Button x:Name="ConfirmAllFieldsButton" Content="全部欄位確認"
+                                    Click="OnConfirmAllFieldsClicked" HorizontalAlignment="Left"
+                                    IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}"
+                                    AutomationProperties.Name="確認全部非空欄位" />
+
+
+                            <Border BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="6" Padding="10">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="分類標籤" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="ClassificationSummaryText" Text="{x:Bind ViewModel.ClassificationSummary, Mode=OneWay}" TextWrapping="Wrap" />
+                                    <Button Content="選擇／新增標籤" Click="OnPickTagsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <!-- === 1. 姓名 (Name) === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="姓名" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.NameRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.NameRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="NameRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnNameRoiClicked" AutomationProperties.Name="局部辨識姓名" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnNameUndoClicked" IsEnabled="{x:Bind ViewModel.NameRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原姓名至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnNameConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認姓名" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.NameRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.NameRow, Mode=OneWay}" PlaceholderText="請輸入姓名" AutomationProperties.Name="姓名內容" />
+                                    <!-- Traditional suggestion -->
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.NameRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.NameRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.NameRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.NameRow.CanApplySuggestion, Mode=OneWay}" AutomationProperties.Name="套用姓名繁體建議" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.NameRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.NameRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.NameRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 2. 公司 (Company) === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="公司" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.CompanyRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.CompanyRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="CompanyRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnCompanyRoiClicked" AutomationProperties.Name="局部辨識公司" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnCompanyUndoClicked" IsEnabled="{x:Bind ViewModel.CompanyRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原公司至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnCompanyConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認公司" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.CompanyRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.CompanyRow, Mode=OneWay}" PlaceholderText="請輸入公司名稱" AutomationProperties.Name="公司內容" />
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.CompanyRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CompanyRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.CompanyRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.CompanyRow.CanApplySuggestion, Mode=OneWay}" AutomationProperties.Name="套用公司繁體建議" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.CompanyRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.CompanyRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CompanyRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 3. 職稱 (Title) === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="職稱" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.TitleRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.TitleRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="TitleRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnTitleRoiClicked" AutomationProperties.Name="局部辨識職稱" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnTitleUndoClicked" IsEnabled="{x:Bind ViewModel.TitleRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原職稱至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnTitleConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認職稱" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.TitleRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.TitleRow, Mode=OneWay}" PlaceholderText="請輸入職稱" AutomationProperties.Name="職稱內容" />
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.TitleRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TitleRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.TitleRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.TitleRow.CanApplySuggestion, Mode=OneWay}" AutomationProperties.Name="套用職稱繁體建議" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.TitleRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.TitleRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.TitleRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 4. 電話 (Phone) - Multiplicity supported === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Column="0" Text="電話" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+                                        <Button Grid.Column="2" Content="+ 新增電話" FontSize="11" Padding="6,2" Click="OnAddPhoneClicked" AutomationProperties.Name="新增一筆電話" />
+                                    </Grid>
+
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.PhoneRows, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DraftRowItem">
+                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" Margin="0,2,0,8">
+                                                    <!-- Row 0: Status Badge and Action Buttons -->
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                                        <Border Grid.Column="0" CornerRadius="3" Padding="4,1" Background="{x:Bind Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                            <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                                        </Border>
+                                                        <Button Grid.Column="2" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnRowRoiClicked" Tag="{x:Bind}" AutomationProperties.Name="局部辨識此電話" />
+                                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnRowUndoClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanUndo, Mode=OneWay}" AutomationProperties.Name="復原電話" />
+                                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnConfirmDraftRowClicked" Tag="{x:Bind}" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認此電話" />
+                                                    </Grid>
+                                                    <!-- Row 1: Full-width editable input -->
+                                                    <TextBox Grid.Row="1" Text="{x:Bind Value, Mode=TwoWay}" TextChanged="OnDraftRowValueChanged" Tag="{x:Bind}" PlaceholderText="請輸入電話號碼" AutomationProperties.Name="電話內容" />
+                                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                                            Visibility="{x:Bind HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanApplySuggestion, Mode=OneWay}" />
+                                                        </Grid>
+                                                    </Border>
+                                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                    </Grid>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- === 5. Email (Email) - Multiplicity supported === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Column="0" Text="Email" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+                                        <Button Grid.Column="2" Content="+ 新增 Email" FontSize="11" Padding="6,2" Click="OnAddEmailClicked" AutomationProperties.Name="新增一筆 Email" />
+                                    </Grid>
+
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.EmailRows, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DraftRowItem">
+                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" Margin="0,2,0,8">
+                                                    <!-- Row 0: Status Badge and Action Buttons -->
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                                        <Border Grid.Column="0" CornerRadius="3" Padding="4,1" Background="{x:Bind Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                            <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                                        </Border>
+                                                        <Button Grid.Column="2" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnRowRoiClicked" Tag="{x:Bind}" AutomationProperties.Name="局部辨識此 Email" />
+                                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnRowUndoClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanUndo, Mode=OneWay}" AutomationProperties.Name="復原 Email" />
+                                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnConfirmDraftRowClicked" Tag="{x:Bind}" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認此 Email" />
+                                                    </Grid>
+                                                    <!-- Row 1: Full-width editable input -->
+                                                    <TextBox Grid.Row="1" Text="{x:Bind Value, Mode=TwoWay}" TextChanged="OnDraftRowValueChanged" Tag="{x:Bind}" PlaceholderText="請輸入 Email 地址" AutomationProperties.Name="Email 內容" />
+                                                    <!-- Row 2: Traditional Suggestion -->
+                                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                                            Visibility="{x:Bind HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanApplySuggestion, Mode=OneWay}" />
+                                                        </Grid>
+                                                    </Border>
+                                                    <!-- Row 3: Original Text and Location -->
+                                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                    </Grid>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- === 6. 網站 (Website) === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="網站" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.WebsiteRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.WebsiteRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="WebsiteRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnWebsiteRoiClicked" AutomationProperties.Name="局部辨識網站" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnWebsiteUndoClicked" IsEnabled="{x:Bind ViewModel.WebsiteRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原網站至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnWebsiteConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認網站" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.WebsiteRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.WebsiteRow, Mode=OneWay}" PlaceholderText="請輸入官方網站網址" AutomationProperties.Name="網站內容" />
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.WebsiteRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.WebsiteRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.WebsiteRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.WebsiteRow.CanApplySuggestion, Mode=OneWay}" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.WebsiteRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.WebsiteRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.WebsiteRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 7. 地址 (Address) - Multi-line supported === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="地址" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.AddressRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.AddressRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="AddressRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnAddressRoiClicked" AutomationProperties.Name="局部辨識地址" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnAddressUndoClicked" IsEnabled="{x:Bind ViewModel.AddressRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原地址至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnAddressConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認地址" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.AddressRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.AddressRow, Mode=OneWay}" PlaceholderText="請輸入地址 (多行保留換行)" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" AutomationProperties.Name="地址內容" />
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.AddressRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AddressRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.AddressRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.AddressRow.CanApplySuggestion, Mode=OneWay}" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.AddressRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.AddressRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AddressRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 8. 備註 (Note) - Multi-line supported === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6">
+                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="備註" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" Width="45" />
+                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind ViewModel.NoteRow, Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                            <TextBlock Text="{x:Bind ViewModel.NoteRow.DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                        </Border>
+                                        <Button Grid.Column="2" x:Name="NoteRoiBtn" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnNoteRoiClicked" AutomationProperties.Name="局部辨識備註" />
+                                        <Button Grid.Column="3" Content="復原" FontSize="11" Padding="6,3" Click="OnNoteUndoClicked" IsEnabled="{x:Bind ViewModel.NoteRow.CanUndo, Mode=OneWay}" AutomationProperties.Name="復原備註至辨識前內容" />
+                                        <Button Grid.Column="4" Content="確認" FontSize="11" Padding="6,3" Click="OnNoteConfirmClicked" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認備註" />
+                                    </Grid>
+                                    <TextBox Grid.Row="1" Text="{x:Bind ViewModel.NoteRow.Value, Mode=TwoWay}" TextChanged="OnFixedFieldValueChanged" Tag="{x:Bind ViewModel.NoteRow, Mode=OneWay}" PlaceholderText="請輸入備註資訊 (多行保留換行)" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="56" AutomationProperties.Name="備註內容" />
+                                    <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                            Visibility="{x:Bind ViewModel.NoteRow.HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.NoteRow.TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind ViewModel.NoteRow, Mode=OneWay}" IsEnabled="{x:Bind ViewModel.NoteRow.CanApplySuggestion, Mode=OneWay}" />
+                                        </Grid>
+                                    </Border>
+                                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Visibility="{x:Bind ViewModel.NoteRow.DisplayOriginalText, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ViewModel.NoteRow.DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.NoteRow.DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                    </Grid>
+                                </Grid>
+                            </Border>
+
+                            <!-- === 9. 自訂欄位 (Custom Fields) === -->
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="10">
+                                <StackPanel Spacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                        <TextBlock Grid.Column="0" Text="自訂欄位" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+                                        <Button Grid.Column="2" Content="+ 新增自訂欄位" FontSize="11" Padding="6,2" Click="OnAddCustomFieldClicked" AutomationProperties.Name="新增一筆自訂欄位" />
+                                        <Button Grid.Column="3" Content="管理名稱" FontSize="11" Padding="6,2" Margin="6,0,0,0" Click="OnManageCustomFieldsClicked" AutomationProperties.Name="管理自訂名稱清單" />
+                                    </Grid>
+
+                                    <!-- Empty custom fields hint -->
+                                    <TextBlock Text="尚無自訂欄位。可點擊右上角「+ 新增自訂欄位」選用或建立如統編、部門、LINE ID 等自訂名稱。"
+                                               FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap"
+                                               Visibility="{x:Bind ViewModel.CustomRows.Count, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay, ConverterParameter=Invert}" />
+
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.CustomRows, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DraftRowItem">
+                                                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="6" Margin="0,4,0,8">
+                                                    <!-- Row 0: Category Selector, Status Badge, and Delete Button -->
+                                                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                                        <ComboBox Grid.Column="0" Loaded="OnRowCategoryComboBoxLoaded" SelectionChanged="OnRowCategoryComboBoxSelectionChanged" Tag="{x:Bind}" Width="140" VerticalAlignment="Center" />
+                                                        <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                            <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                                        </Border>
+                                                        <Button Grid.Column="2" Content="✕" FontSize="11" Padding="6,3" Click="OnDeleteDraftRowClicked" Tag="{x:Bind}" AutomationProperties.Name="刪除此自訂欄位" />
+                                                    </Grid>
+                                                    <!-- Row 1: Action Buttons -->
+                                                    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="6">
+                                                        <Button Grid.Column="1" Content="局部辨識" FontSize="11" Padding="6,3" Click="OnRowRoiClicked" Tag="{x:Bind}" AutomationProperties.Name="局部辨識自訂欄位" />
+                                                        <Button Grid.Column="2" Content="復原" FontSize="11" Padding="6,3" Click="OnRowUndoClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanUndo, Mode=OneWay}" AutomationProperties.Name="復原自訂欄位" />
+                                                        <Button Grid.Column="3" Content="確認" FontSize="11" Padding="6,3" Click="OnConfirmDraftRowClicked" Tag="{x:Bind}" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認自訂欄位" />
+                                                    </Grid>
+                                                    <TextBox Grid.Row="2" Text="{x:Bind Value, Mode=TwoWay}" TextChanged="OnDraftRowValueChanged" Tag="{x:Bind}" PlaceholderText="請輸入自訂欄位內容" AutomationProperties.Name="自訂欄位內容" />
+                                                    <Border Grid.Row="3" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                                            Visibility="{x:Bind HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                            <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                            <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanApplySuggestion, Mode=OneWay}" />
+                                                        </Grid>
+                                                    </Border>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- === 10. 待分類 (Unclassified Candidates - Collapsible) (RS-ISSUE-0008 OCR8-08) === -->
+                            <Expander x:Name="UnclassifiedExpander" Header="{x:Bind ViewModel.UnclassifiedCountText, Mode=OneWay}" IsExpanded="False" HorizontalAlignment="Stretch">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="整圖辨識中無法精確判定標準欄位、或與已填入欄位衝突的候選文字行收納於此。可下拉修改類別、套用建議、確認或刪除。"
+                                               FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+
+                                    <ItemsControl ItemsSource="{x:Bind ViewModel.UnclassifiedRows, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DraftRowItem">
+                                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1" CornerRadius="6" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Padding="8" Margin="0,0,0,6">
+                                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="4">
+                                                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="6">
+                                                            <ComboBox Grid.Column="0" Loaded="OnRowCategoryComboBoxLoaded" SelectionChanged="OnRowCategoryComboBoxSelectionChanged" Tag="{x:Bind}" Width="135" VerticalAlignment="Center" />
+                                                            <Border Grid.Column="1" CornerRadius="3" Padding="4,1" Background="{x:Bind Converter={StaticResource DraftStatusToBrushConverter}, Mode=OneWay}" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                                <TextBlock Text="{x:Bind DisplayStatus, Mode=OneWay}" FontSize="10" Foreground="White" FontWeight="Bold" />
+                                                            </Border>
+                                                            <Button Grid.Column="2" Content="確認" FontSize="11" Padding="6,3" Click="OnConfirmDraftRowClicked" Tag="{x:Bind}" Style="{ThemeResource AccentButtonStyle}" AutomationProperties.Name="確認此待分類項目" />
+                                                            <Button Grid.Column="3" Content="✕" FontSize="11" Padding="6,3" Click="OnDeleteDraftRowClicked" Tag="{x:Bind}" AutomationProperties.Name="刪除此待分類項目" />
+                                                        </Grid>
+                                                        <TextBox Grid.Row="1" Text="{x:Bind Value, Mode=TwoWay}" TextChanged="OnDraftRowValueChanged" Tag="{x:Bind}" PlaceholderText="可編輯文字" AutomationProperties.Name="待分類文字內容" />
+                                                        <Border Grid.Row="2" Background="{ThemeResource SubtleFillColorSecondaryBrush}" CornerRadius="4" Padding="6,4"
+                                                                Visibility="{x:Bind HasSuggestion, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}">
+                                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                                <TextBlock Grid.Column="0" Text="繁體建議:" FontSize="10" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" FontWeight="Bold" VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="1" Text="{x:Bind TraditionalSuggestion, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                                                <Button Grid.Column="2" Content="套用建議" FontSize="11" Padding="6,3" Click="OnApplySuggestionClicked" Tag="{x:Bind}" IsEnabled="{x:Bind CanApplySuggestion, Mode=OneWay}" />
+                                                            </Grid>
+                                                        </Border>
+                                                        <Grid Grid.Row="3" ColumnDefinitions="*,Auto">
+                                                            <TextBlock Grid.Column="0" Text="{x:Bind DisplayOriginalText, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Grid.Column="1" Text="{x:Bind DisplayLocation, Mode=OneWay}" FontSize="10" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                                                        </Grid>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Expander>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+        </ScrollViewer>
+
+        <!-- Full-Window Saved Cards Table View Host -->
+        <Grid Grid.Row="0" Grid.RowSpan="3" x:Name="SavedCardsTableHostGrid" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+        <!-- Loading Overlay during OCR -->
+        <Grid Grid.RowSpan="3" x:Name="LoadingOverlay" Background="#80000000" Visibility="Collapsed">
+            <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="8" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280">
+                <StackPanel Spacing="16" HorizontalAlignment="Center">
+                    <ProgressRing IsActive="True" Width="48" Height="48" />
+                    <TextBlock x:Name="LoadingMessageText" Text="正在辨識名片中..." HorizontalAlignment="Center" FontWeight="Medium" />
+                    <Button Content="取消辨識" Click="OnCancelOcrClicked" HorizontalAlignment="Center" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <TextBlock Grid.Row="3" x:Name="SessionStatusText" Margin="0,6,0,0"
+                   Text="{x:Bind ViewModel.StatusMessage, Mode=OneWay}" FontSize="12" TextWrapping="Wrap"
+                   Visibility="{x:Bind ViewModel.HasStatusMessage, Converter={StaticResource BoolToVisibilityConverter}, Mode=OneWay}"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                   AutomationProperties.Name="操作結果" AutomationProperties.LiveSetting="Polite" />
+    </Grid>
+</Page>
