@@ -1551,22 +1551,34 @@ public sealed partial class MainPage : Page
     {
         if (_currentActiveDialog != null) return;
 
+        string semVer = Program.GetAppVersion();
+        string fileVer = _updateService.CurrentVersion;
+        string changeLogText = _updateService.LoadLocalChangeLogText();
+
         var dialog = new ContentDialog
         {
             Title = "關於 MajiOCR.Windows",
             Content = new StackPanel
             {
                 Spacing = 8,
+                MinWidth = 480,
+                MaxWidth = 560,
                 Children =
                 {
-                    new TextBlock { Text = "MajiOCR.Windows", FontWeight = Microsoft.UI.Text.FontWeights.Bold, FontSize = 16 },
-                    new TextBlock { Text = "版本: 0.1.0-beta.17 (ISSUE-0021 修復 ContentDialog 548px 鎖死限制並全面擴大標籤介面)" },
-                    new TextBlock { Text = "架構: Windows 11 x64 WinUI 3 (Unpackaged, Self-Contained)" },
-                    new TextBlock { Text = "離線 OCR: Tesseract 5 (.NET 5.2.0) + 官方五語模型" },
-                    new TextBlock { Text = "支援語言: 繁體中文 (chi_tra)、簡體中文 (chi_sim)、日語 (jpn)、韓語 (kor)、英語 (eng)" },
-                    new TextBlock { Text = "本機儲存: 離線 SQLite + 受控原圖目錄 (%LocalAppData%/MajiOCR.Windows/Storage/)" },
-                    new TextBlock { Text = "自訂名稱保存: %LocalAppData%/MajiOCR.Windows/custom-fields.json (UTF-8 JSON v1)" },
-                    new TextBlock { Text = "說明: 本版本為 Windows 原生離線名片辨識與固定欄位管理系統，支援五語離線辨識、局部框選、欄位編輯、單值衝突處理及本機資料庫與受控圖片儲存管理；自訂欄位定義可永久儲存重用。" }
+                    new TextBlock { Text = $"MajiOCR.Windows {semVer} (v{fileVer})", FontWeight = Microsoft.UI.Text.FontWeights.Bold, FontSize = 16 },
+                    new TextBlock { Text = $"桌面端版本: {semVer} (FileVersion: {fileVer}) | 內嵌 iOS/Web PWA 版本: 0.1.0-beta.1", TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = "架構: Windows 11 x64 WinUI 3 (Unpackaged, Self-Contained Single-File) + iOS 16+ PWA (Vercel 一鍵部署)" , TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = "離線 OCR: Tesseract 5 (.NET 5.2.0) + 官方五語模型 (繁中/簡中/日/韓/英)" },
+                    new TextBlock { Text = "本機與雲端儲存: SQLite (contacts.sqlite3) + SQLCipher-AES256 主密碼加密 + Google Drive 備份與 iPhone 雙管道同步", TextWrapping = TextWrapping.Wrap },
+                    new TextBlock { Text = "📋 版本更新資訊與變更紀錄 (Change Log)：", FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, Margin = new Thickness(0, 6, 0, 0) },
+                    new TextBox
+                    {
+                        IsReadOnly = true,
+                        AcceptsReturn = true,
+                        TextWrapping = TextWrapping.Wrap,
+                        Height = 180,
+                        Text = changeLogText
+                    }
                 }
             },
             CloseButtonText = "確定",
