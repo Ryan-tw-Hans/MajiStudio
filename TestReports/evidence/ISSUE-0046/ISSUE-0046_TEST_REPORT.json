@@ -1,0 +1,33 @@
+﻿{
+  "Timestamp": "2026-10-16T22:54:53.2984919Z",
+  "Version": "0.1.0-beta.26",
+  "IssueId": "ISSUE-0046",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 3,
+  "PassCount": 3,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "TC-01",
+      "Description": "\u9A57\u8B49 UpdateManifest.Parse \u652F\u63F4\u539F\u751F GitHub Releases API JSON \u683C\u5F0F",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 382
+    },
+    {
+      "TestId": "TC-02",
+      "Description": "\u9A57\u8B49 DefaultReleaseManifestUrl \u70BA GitHub Releases \u4E14\u820A Google Drive \u8A2D\u5B9A\u6703\u81EA\u52D5\u9077\u79FB",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 148
+    },
+    {
+      "TestId": "TC-03",
+      "Description": "\u9A57\u8B49 VERSION.txt\u3001CHANGELOG.txt \u8207 MajiOCR.Windows.csproj \u540C\u6B65\u70BA 0.1.0.26",
+      "Passed": true,
+      "Details": "PASS",
+      "LatencyMs": 2
+    }
+  ]
+}

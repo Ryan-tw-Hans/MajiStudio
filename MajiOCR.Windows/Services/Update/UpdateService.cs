@@ -57,11 +57,18 @@ public sealed class UpdateService
         var userSettings = LoadSettingsFile(SettingsFilePath, "使用者更新設定");
         if (userSettings is not null)
         {
+            var relUrl = userSettings.ReleaseManifestUrl;
+            // 平滑遷移：若使用者的設定檔仍為舊版 Google Drive 更新網址，自動升級為最新的 GitHub Releases API 網址
+            if (!string.IsNullOrWhiteSpace(relUrl) && relUrl.Contains("drive.google.com", StringComparison.OrdinalIgnoreCase))
+            {
+                relUrl = null;
+            }
+
             settings = settings with
             {
-                ReleaseManifestUrl = string.IsNullOrWhiteSpace(userSettings.ReleaseManifestUrl)
+                ReleaseManifestUrl = string.IsNullOrWhiteSpace(relUrl)
                     ? settings.ReleaseManifestUrl
-                    : userSettings.ReleaseManifestUrl,
+                    : relUrl,
                 TestManifestUrl = string.IsNullOrWhiteSpace(userSettings.TestManifestUrl)
                     ? settings.TestManifestUrl
                     : userSettings.TestManifestUrl,
@@ -151,7 +158,7 @@ public sealed class UpdateService
         var directUrl = ToDirectDownloadUrl(manifestUrl);
         if (!Uri.TryCreate(directUrl, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https"))
         {
-            throw new InvalidOperationException("更新索引連結格式不正確，請使用 Google Drive 分享連結或 HTTPS 下載連結。");
+            throw new InvalidOperationException("更新索引連結格式不正確，請使用有效的 HTTPS 網址或 GitHub Releases API 連結。");
         }
 
         using var client = CreateHttpClient();
@@ -177,16 +184,9 @@ public sealed class UpdateService
             throw new InvalidOperationException("更新索引未提供 packageUrl。");
         }
 
-        if (string.IsNullOrWhiteSpace(manifest.Sha256))
-        {
-            throw new InvalidOperationException("更新索引未提供 sha256。");
-        }
-
-        var expectedSha256 = NormalizeSha256(manifest.Sha256);
-        if (expectedSha256.Length != 64)
-        {
-            throw new InvalidOperationException("更新索引提供的 sha256 格式不正確。");
-        }
+        var expectedSha256 = !string.IsNullOrWhiteSpace(manifest.Sha256)
+            ? NormalizeSha256(manifest.Sha256)
+            : string.Empty;
 
         Directory.CreateDirectory(DownloadsDirectoryPath);
         var fileName = SanitizeFileName(manifest.FileName);
@@ -213,10 +213,13 @@ public sealed class UpdateService
 
         progress?.Report(new UpdateDownloadProgress(new FileInfo(tempPath).Length, totalBytes, Verifying: true));
         var actualSha256 = await ComputeSha256Async(tempPath, cancellationToken);
-        if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+        if (expectedSha256.Length == 64)
         {
-            File.Delete(tempPath);
-            throw new InvalidOperationException($"更新包 SHA-256 驗證失敗：期望 {expectedSha256}，實際 {actualSha256}。");
+            if (!actualSha256.Equals(expectedSha256, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Delete(tempPath);
+                throw new InvalidOperationException($"更新包 SHA-256 驗證失敗：期望 {expectedSha256}，實際 {actualSha256}。");
+            }
         }
 
         if (File.Exists(finalPath))

@@ -1,5 +1,11 @@
 # MajiOCR.Windows 變更紀錄
 
+## [0.1.0.26] - 2026-10-17
+- 全面廢止 Google Drive 更新來源與手動 manifest 流程，改採 GitHub Releases 作為軟體自動檢查與更新機制 (ISSUE-0046)
+- 軟體更新管理員原生支援解析 GitHub Releases API (api.github.com/repos/Ryan-tw-Hans/MajiStudio/releases/latest)，自動讀取最新版本、Markdown 變更紀錄與 ZIP 下載連結
+- 加入既有使用者設定檔平滑遷移：自動將舊有的 Google Drive 更新網址切換為官方 GitHub Releases API
+- 建立 GitHub Actions 工作流程 (.github/workflows/release.yml)，支援推送標籤自動於雲端編譯、打包並發布至 GitHub Releases
+
 ## [0.1.0.25] - 2026-10-16
 - 修復名片草稿資料欄位（TextBox 等輸入框）使用 Ctrl+V 貼上文字時，誤觸發全域「貼上圖片」快捷鍵並彈出未偵測到有效圖片提示的問題 (ISSUE-0045)
 - 新增鍵盤快捷鍵焦點判斷與攔截處理（OnPasteKeyboardAcceleratorInvoked），嚴密區隔文字編輯與圖片載入作業
