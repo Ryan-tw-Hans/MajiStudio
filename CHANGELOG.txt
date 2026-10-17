@@ -1,5 +1,13 @@
 # MajiOCR.Windows 變更紀錄
 
+## [0.1.0.29] - 2026-10-17
+- iOS PWA (MajiOCR.Web v0.2.0-beta.1) 升級支援名片資料編輯、新增名片與照片拍攝/選取 (ISSUE-0049)
+- 內建瀏覽器端 WebAssembly SQLite 引擎 (sql.js) 與 Pure-JS ZIP 打包器，支援將修改後的名片資料庫與圖檔直接打包為標準 MajiOCR_Backup_iOS_*.zip
+- 支援 SQLCipher-AES256 雙向加解密：若備份受主密碼保護，修改後自動使用 WebCrypto 重新逐頁加密並注入 HMAC-SHA512 校驗
+- 支援「📤 備份匯出與 Google Drive 雲端同步」：新增 Google Drive REST API Multipart Upload 雙向同步上傳至 MajiOCR_Backups 資料夾
+- 支援「📦 匯出備份壓縮包 (.zip)」透過 iOS 原生 Web Share API 儲存至 iPhone 檔案、iCloud Drive 或 AirDrop
+- 支援「📇 匯出名片為 vCard (.vcf)」供 iPhone 原生系統通訊錄 (Apple Contacts) 一鍵匯入
+
 ## [0.1.0.28] - 2026-10-17
 - 優化「📱 iOS / Web 行動版設定與部署」對話框視覺排版與尺寸限制 (ISSUE-0048)
 - 顯式擴大對話框寬度（MaxWidth = 720px）並支援自適應延伸，徹底解決模式切換按鈕文字遭強制裁切問題

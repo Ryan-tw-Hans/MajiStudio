@@ -16,6 +16,11 @@
     customFields: [],
     manifest: null,
     imageBlobUrls: new Map(), // relativePath -> objectURL
+    imageEntriesMap: new Map(), // relativePath -> Uint8Array
+    currentMasterPassword: '',
+    editingContactId: null,
+    tempPhotos: { front: null, back: null },
+    selectedEditTags: new Set(),
     searchQuery: '',
     selectedTagId: '__ALL__', // '__ALL__' | '__UNTAGGED__' | tagId
     sortBy: 'created_desc', // 'created_desc' | 'name_asc' | 'company_asc'
@@ -112,6 +117,7 @@
           for (let i = 0; i < keys.length; i++) {
             imgMap.set(keys[i], vals[i]);
           }
+          state.imageEntriesMap = imgMap;
           resolve({ snapshot, imgMap });
         };
         tx.onerror = () => {
@@ -523,9 +529,17 @@
       };
     });
 
-    const vcfBtn = document.getElementById('detailExportVcfBtn');
-    if (vcfBtn) {
-      vcfBtn.onclick = () => exportContactsToVcf([contact], `${contact.fullName || 'contact'}.vcf`);
+    const editBtn = document.getElementById('editContactBtn');
+    if (editBtn) {
+      editBtn.onclick = () => openEditContactModal(contact.contactId);
+    }
+    const exportVcfBtn = document.getElementById('exportSingleVcfBtn');
+    if (exportVcfBtn) {
+      exportVcfBtn.onclick = () => exportContactsToVcf([contact], `${contact.fullName || 'contact'}.vcf`);
+    }
+    const delBtn = document.getElementById('deleteContactBtn');
+    if (delBtn) {
+      delBtn.onclick = deleteActiveContact;
     }
 
     modal.classList.remove('hidden');
@@ -603,6 +617,534 @@
     showToast(`已匯出 ${contactsList.length} 筆聯絡人 (.vcf)`);
   }
 
+  // --- State Persistence to IndexedDB ---
+  async function persistCurrentState() {
+    const effectiveManifest = Object.assign({}, state.manifest || {
+      backupId: 'MajiOCR_Backup_iOS',
+      platform: 'ios',
+      createdAtUtc: new Date().toISOString()
+    }, {
+      contactCount: state.contacts.length,
+      imageCount: state.imageEntriesMap ? state.imageEntriesMap.size : 0
+    });
+    state.manifest = effectiveManifest;
+    await saveToIndexedDb(
+      {
+        contacts: state.contacts,
+        tagCatalog: state.tagCatalog,
+        customFields: state.customFields
+      },
+      effectiveManifest,
+      state.imageEntriesMap
+    );
+  }
+
+  // --- Backup ZIP & Cloud Upload Pipeline ---
+  async function generateBackupZipBytes(onProgress) {
+    const isProtected = Boolean(state.manifest && state.manifest.isPasswordProtected);
+
+    if (onProgress) onProgress(10, '正在編譯最新名片資料庫 (SQLite)...');
+    const plainDbBytes = await window.MajiSqliteBuilder.buildSqliteDatabaseBuffer({
+      contacts: state.contacts,
+      tagCatalog: state.tagCatalog,
+      customFields: state.customFields,
+      imageEntriesMap: state.imageEntriesMap,
+      isPasswordProtected: isProtected
+    });
+
+    let dbBytesToPack = plainDbBytes;
+
+    if (isProtected) {
+      const pass = state.currentMasterPassword;
+      if (!pass) {
+        throw new Error('此資料庫為主密碼加密庫，請先於解鎖時輸入主密碼後再進行匯出或同步。');
+      }
+      if (onProgress) onProgress(40, '正在以 SQLCipher-AES256 加密資料庫...');
+      dbBytesToPack = await window.MajiSqlCipher.encryptSqlCipher4Database(plainDbBytes, pass, onProgress);
+    }
+
+    if (onProgress) onProgress(70, '正在壓縮打包備份 ZIP (含 manifest 與名片圖檔)...');
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const tsStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    const backupId = `MajiOCR_Backup_iOS_${tsStr}`;
+
+    const manifestObj = {
+      BackupId: backupId,
+      Platform: 'ios',
+      CreatedAtUtc: now.toISOString(),
+      ContactCount: state.contacts.length,
+      ImageCount: state.imageEntriesMap ? state.imageEntriesMap.size : 0,
+      IsPasswordProtected: isProtected,
+      EncryptionAlgorithm: isProtected ? 'SQLCipher-AES256' : null
+    };
+
+    const zipEntries = [
+      ['manifest.json', JSON.stringify(manifestObj, null, 2)],
+      ['contacts.sqlite3', dbBytesToPack]
+    ];
+
+    if (state.imageEntriesMap) {
+      for (const [relPath, imgBytes] of state.imageEntriesMap.entries()) {
+        zipEntries.push([relPath, imgBytes]);
+      }
+    }
+
+    const zipBytes = window.MajiZipReader.packZipBuffer(zipEntries);
+    return { zipBytes, backupId, fileName: `${backupId}.zip` };
+  }
+
+  async function exportBackupZip() {
+    if (state.contacts.length === 0) {
+      showToast('目前尚無名片資料可匯出');
+      return;
+    }
+    setSyncStatus('正在產生備份壓縮包 (.zip)...', false);
+    try {
+      const { zipBytes, fileName } = await generateBackupZipBytes((pct, msg) => setSyncStatus(msg, false));
+      const blob = new Blob([zipBytes], { type: 'application/zip' });
+      const file = new File([blob], fileName, { type: 'application/zip' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        setSyncStatus('正在喚起 iOS 系統分享面板...', false);
+        await navigator.share({
+          title: fileName,
+          text: `MajiOCR iOS 備份包 (${state.contacts.length} 筆名片)`,
+          files: [file]
+        });
+        showToast('備份包已成功分享/儲存！');
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+        showToast(`已匯出備份：${fileName}`);
+      }
+      setSyncStatus('備份壓縮包已成功匯出！', false);
+    } catch (err) {
+      setSyncStatus(`匯出備份失敗：${err.message || err}`, true);
+    }
+  }
+
+  async function uploadBackupToGoogleDrive() {
+    const token = state.driveAccessToken.trim();
+    if (!token) {
+      setSyncStatus('請先點擊上方「Google 帳號登入授權」登入 Google 帳號。', true);
+      return;
+    }
+    if (state.contacts.length === 0) {
+      showToast('目前尚無名片資料可同步');
+      return;
+    }
+
+    setSyncStatus('正在打包最新名片備份...', false);
+    try {
+      const { zipBytes, fileName } = await generateBackupZipBytes((pct, msg) => setSyncStatus(msg, false));
+      setSyncStatus(`正在上傳「${fileName}」至 Google Drive...`, false);
+
+      const metadata = {
+        name: fileName,
+        description: `MajiOCR iOS PWA 備份 (名片: ${state.contacts.length} 筆, 圖片: ${state.imageEntriesMap.size} 張)`,
+        mimeType: 'application/zip',
+        appProperties: {
+          platform: 'ios',
+          contact_count: String(state.contacts.length),
+          image_count: String(state.imageEntriesMap.size),
+          is_password_protected: String(Boolean(state.manifest && state.manifest.isPasswordProtected))
+        }
+      };
+
+      const boundary = '-------MajiOcrBoundary' + Math.random().toString(36).substring(2);
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const closeDelim = `\r\n--${boundary}--`;
+
+      const metaPart = `Content-Type: application/json; charset=UTF-8\r\n\r\n` + JSON.stringify(metadata) + `\r\n`;
+      const fileHeader = `Content-Type: application/zip\r\n\r\n`;
+
+      const encoder = new TextEncoder();
+      const metaBytes = encoder.encode(delimiter + metaPart + delimiter + fileHeader);
+      const closeBytes = encoder.encode(closeDelim);
+
+      const totalSize = metaBytes.length + zipBytes.length + closeBytes.length;
+      const combined = new Uint8Array(totalSize);
+      combined.set(metaBytes, 0);
+      combined.set(zipBytes, metaBytes.length);
+      combined.set(closeBytes, metaBytes.length + zipBytes.length);
+
+      const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+      const resp = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`
+        },
+        body: combined
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 401 || resp.status === 403) {
+          state.driveAccessToken = '';
+          sessionStorage.removeItem('majiocr_drive_token');
+          throw new Error('Google 授權已過期或缺乏寫入權限，請重新登入授權。');
+        }
+        throw new Error(`Google Drive 上傳回應錯誤 (HTTP ${resp.status})`);
+      }
+
+      setSyncStatus(`✅ 成功上傳備份「${fileName}」至 Google Drive！`, false);
+      showToast('☁️ 最新備份已成功同步至 Google Drive！');
+      fetchGoogleDriveBackups();
+    } catch (err) {
+      setSyncStatus(`同步上傳失敗：${err.message || err}`, true);
+    }
+  }
+
+  // --- Contact Edit & Photo Handlers ---
+  async function handlePhotoSelected(side, file) {
+    if (!file) return;
+    const ab = await file.arrayBuffer();
+    const bytes = new Uint8Array(ab);
+    const mime = file.type || 'image/jpeg';
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    state.tempPhotos[side] = { bytes, mime, url, remove: false };
+
+    const previewEl = document.getElementById(`${side}PhotoPreview`);
+    const placeholderEl = document.getElementById(`${side}PhotoPlaceholder`);
+    const removeBtn = document.getElementById(`remove${side.charAt(0).toUpperCase() + side.slice(1)}PhotoBtn`);
+
+    previewEl.src = url;
+    previewEl.classList.remove('hidden');
+    placeholderEl.classList.add('hidden');
+    removeBtn.classList.remove('hidden');
+  }
+
+  function removePhoto(side) {
+    state.tempPhotos[side] = { bytes: null, mime: null, url: null, remove: true };
+    const previewEl = document.getElementById(`${side}PhotoPreview`);
+    const placeholderEl = document.getElementById(`${side}PhotoPlaceholder`);
+    const removeBtn = document.getElementById(`remove${side.charAt(0).toUpperCase() + side.slice(1)}PhotoBtn`);
+
+    previewEl.src = '';
+    previewEl.classList.add('hidden');
+    placeholderEl.classList.remove('hidden');
+    removeBtn.classList.add('hidden');
+  }
+
+  function openCreateContactModal() {
+    state.editingContactId = null;
+    document.getElementById('editModalTitle').textContent = '➕ 新增名片';
+    document.getElementById('editFullName').value = '';
+    document.getElementById('editCompany').value = '';
+    document.getElementById('editJobTitle').value = '';
+    document.getElementById('editDepartment').value = '';
+    document.getElementById('editTaxId').value = '';
+    document.getElementById('editNotes').value = '';
+
+    state.selectedEditTags = new Set();
+    state.tempPhotos = { front: null, back: null };
+    removePhoto('front');
+    removePhoto('back');
+
+    const dynContainer = document.getElementById('dynamicValuesContainer');
+    dynContainer.innerHTML = '';
+    addDynamicValueRow('Phone', '電話', '');
+    addDynamicValueRow('Email', 'Email', '');
+
+    renderEditTagsList();
+    document.getElementById('editContactModal').classList.remove('hidden');
+  }
+
+  function openEditContactModal(contactId) {
+    const contact = state.contacts.find((c) => c.contactId === contactId);
+    if (!contact) return;
+
+    state.editingContactId = contactId;
+    document.getElementById('editModalTitle').textContent = '✏️ 編輯名片';
+    document.getElementById('editFullName').value = contact.fullName || '';
+    document.getElementById('editCompany').value = contact.company || '';
+    document.getElementById('editJobTitle').value = contact.jobTitle || '';
+    document.getElementById('editDepartment').value = contact.department || '';
+    document.getElementById('editTaxId').value = contact.taxId || '';
+    document.getElementById('editNotes').value = contact.notes || '';
+
+    state.selectedEditTags = new Set((contact.tags || []).map((t) => t.tagId || t.id));
+    state.tempPhotos = { front: null, back: null };
+
+    const frontImg = (contact.images || []).find((img) => img.side === 1 || !img.side);
+    const backImg = (contact.images || []).find((img) => img.side === 2);
+
+    if (frontImg) {
+      const url = resolveContactImageUrl(frontImg.relativePath);
+      if (url) {
+        document.getElementById('frontPhotoPreview').src = url;
+        document.getElementById('frontPhotoPreview').classList.remove('hidden');
+        document.getElementById('frontPhotoPlaceholder').classList.add('hidden');
+        document.getElementById('removeFrontPhotoBtn').classList.remove('hidden');
+      } else {
+        removePhoto('front');
+      }
+    } else {
+      removePhoto('front');
+    }
+
+    if (backImg) {
+      const url = resolveContactImageUrl(backImg.relativePath);
+      if (url) {
+        document.getElementById('backPhotoPreview').src = url;
+        document.getElementById('backPhotoPreview').classList.remove('hidden');
+        document.getElementById('backPhotoPlaceholder').classList.add('hidden');
+        document.getElementById('removeBackPhotoBtn').classList.remove('hidden');
+      } else {
+        removePhoto('back');
+      }
+    } else {
+      removePhoto('back');
+    }
+
+    const dynContainer = document.getElementById('dynamicValuesContainer');
+    dynContainer.innerHTML = '';
+    for (const p of contact.phones || []) addDynamicValueRow(p.kind || 'Phone', p.label || '電話', p.value);
+    for (const e of contact.emails || []) addDynamicValueRow('Email', 'Email', e.value);
+    for (const a of contact.addresses || []) addDynamicValueRow('Address', '地址', a.value);
+    for (const w of contact.websites || []) addDynamicValueRow('Website', '網站', w.value);
+    for (const c of contact.customFields || []) addDynamicValueRow('Custom', c.label || '自訂', c.value);
+
+    if (dynContainer.children.length === 0) {
+      addDynamicValueRow('Phone', '電話', '');
+    }
+
+    renderEditTagsList();
+    document.getElementById('detailModal').classList.add('hidden');
+    document.getElementById('editContactModal').classList.remove('hidden');
+  }
+
+  function addDynamicValueRow(kind, label, value) {
+    const container = document.getElementById('dynamicValuesContainer');
+    const row = document.createElement('div');
+    row.className = 'dynamic-value-row';
+    row.innerHTML = `
+      <select class="dynamic-kind-select" aria-label="欄位類型">
+        <option value="Phone" ${kind === 'Phone' ? 'selected' : ''}>電話</option>
+        <option value="MobilePhone" ${kind === 'MobilePhone' ? 'selected' : ''}>手機</option>
+        <option value="Email" ${kind === 'Email' ? 'selected' : ''}>Email</option>
+        <option value="Address" ${kind === 'Address' ? 'selected' : ''}>地址</option>
+        <option value="Website" ${kind === 'Website' ? 'selected' : ''}>網站</option>
+        <option value="Custom" ${kind === 'Custom' ? 'selected' : ''}>自訂</option>
+      </select>
+      <input type="text" class="dynamic-val-input" placeholder="輸入內容..." value="${escapeHtml(value || '')}" />
+      <button type="button" class="btn-remove-row" title="刪除此列">✕</button>
+    `;
+    row.querySelector('.btn-remove-row').onclick = () => row.remove();
+    container.appendChild(row);
+  }
+
+  function renderEditTagsList() {
+    const container = document.getElementById('editTagsContainer');
+    container.innerHTML = '';
+    for (const tag of state.tagCatalog) {
+      const tid = tag.tagId || tag.id;
+      const chip = document.createElement('div');
+      chip.className = `edit-tag-chip ${state.selectedEditTags.has(tid) ? 'selected' : ''}`;
+      chip.textContent = tag.displayName || tag.name;
+      chip.onclick = () => {
+        if (state.selectedEditTags.has(tid)) {
+          state.selectedEditTags.delete(tid);
+        } else {
+          state.selectedEditTags.add(tid);
+        }
+        renderEditTagsList();
+      };
+      container.appendChild(chip);
+    }
+  }
+
+  function handleAddNewTag() {
+    const input = document.getElementById('newTagInput');
+    const name = (input.value || '').trim();
+    if (!name) return;
+    const norm = name.toLowerCase().replace(/\s+/g, '');
+    let existing = state.tagCatalog.find(
+      (t) => (t.displayName && t.displayName.trim().toLowerCase() === norm) || t.normalizedKey === norm
+    );
+    if (!existing) {
+      const newTagId = 'tag-' + Math.random().toString(36).substring(2, 9);
+      existing = { tagId: newTagId, displayName: name, normalizedKey: norm };
+      state.tagCatalog.push(existing);
+    }
+    state.selectedEditTags.add(existing.tagId || existing.id);
+    input.value = '';
+    renderEditTagsList();
+  }
+
+  async function handleSaveContactForm(e) {
+    if (e) e.preventDefault();
+    const fullName = (document.getElementById('editFullName').value || '').trim();
+    if (!fullName) {
+      alert('請輸入姓名');
+      return;
+    }
+
+    const company = (document.getElementById('editCompany').value || '').trim();
+    const jobTitle = (document.getElementById('editJobTitle').value || '').trim();
+    const department = (document.getElementById('editDepartment').value || '').trim();
+    const taxId = (document.getElementById('editTaxId').value || '').trim();
+    const notes = (document.getElementById('editNotes').value || '').trim();
+
+    const phones = [];
+    const emails = [];
+    const addresses = [];
+    const websites = [];
+    const customFields = [];
+    const allFields = [];
+
+    allFields.push({ kind: 'FullName', label: '姓名', value: fullName });
+    if (company) allFields.push({ kind: 'CompanyName', label: '公司', value: company });
+    if (jobTitle) allFields.push({ kind: 'JobTitle', label: '職稱', value: jobTitle });
+    if (department) allFields.push({ kind: 'Department', label: '部門', value: department });
+    if (taxId) allFields.push({ kind: 'TaxId', label: '統一編號', value: taxId });
+    if (notes) allFields.push({ kind: 'Notes', label: '備註', value: notes });
+
+    const rows = document.querySelectorAll('#dynamicValuesContainer .dynamic-value-row');
+    rows.forEach((r) => {
+      const kind = r.querySelector('.dynamic-kind-select').value;
+      const val = (r.querySelector('.dynamic-val-input').value || '').trim();
+      if (!val) return;
+      if (kind === 'Phone' || kind === 'MobilePhone') {
+        const label = kind === 'MobilePhone' ? '手機' : '電話';
+        phones.push({ label, value: val, kind });
+        allFields.push({ kind, label, value: val });
+      } else if (kind === 'Email') {
+        emails.push({ label: 'Email', value: val });
+        allFields.push({ kind: 'Email', label: 'Email', value: val });
+      } else if (kind === 'Address') {
+        addresses.push({ label: '地址', value: val });
+        allFields.push({ kind: 'Address', label: '地址', value: val });
+      } else if (kind === 'Website') {
+        websites.push({ label: '網站', value: val });
+        allFields.push({ kind: 'Website', label: '網站', value: val });
+      } else {
+        customFields.push({ label: '自訂欄位', value: val });
+        allFields.push({ kind: 'Custom', label: '自訂欄位', value: val });
+      }
+    });
+
+    const assignedTags = [];
+    for (const tag of state.tagCatalog) {
+      const tid = tag.tagId || tag.id;
+      if (state.selectedEditTags.has(tid)) {
+        assignedTags.push(tag);
+      }
+    }
+
+    const cid = state.editingContactId || ('contact-' + Math.random().toString(36).substring(2, 10));
+    let existingContact = state.contacts.find((c) => c.contactId === cid);
+
+    const nowIso = new Date().toISOString();
+    const images = existingContact && Array.isArray(existingContact.images) ? [...existingContact.images] : [];
+
+    if (!state.imageEntriesMap) state.imageEntriesMap = new Map();
+
+    if (state.tempPhotos.front) {
+      const relPath = `card-images/${cid}_front.jpg`;
+      if (state.tempPhotos.front.remove) {
+        state.imageEntriesMap.delete(relPath);
+        const idx = images.findIndex((img) => img.side === 1 || !img.side);
+        if (idx >= 0) images.splice(idx, 1);
+      } else if (state.tempPhotos.front.bytes) {
+        state.imageEntriesMap.set(relPath, state.tempPhotos.front.bytes);
+        const existingImg = images.find((img) => img.side === 1 || !img.side);
+        if (existingImg) {
+          existingImg.relativePath = relPath;
+        } else {
+          images.push({ assetId: 'img-' + Math.random().toString(36).substring(2, 9), side: 1, relativePath: relPath });
+        }
+      }
+    }
+
+    if (state.tempPhotos.back) {
+      const relPath = `card-images/${cid}_back.jpg`;
+      if (state.tempPhotos.back.remove) {
+        state.imageEntriesMap.delete(relPath);
+        const idx = images.findIndex((img) => img.side === 2);
+        if (idx >= 0) images.splice(idx, 1);
+      } else if (state.tempPhotos.back.bytes) {
+        state.imageEntriesMap.set(relPath, state.tempPhotos.back.bytes);
+        const existingImg = images.find((img) => img.side === 2);
+        if (existingImg) {
+          existingImg.relativePath = relPath;
+        } else {
+          images.push({ assetId: 'img-' + Math.random().toString(36).substring(2, 9), side: 2, relativePath: relPath });
+        }
+      }
+    }
+
+    rebuildImageObjectUrls(state.imageEntriesMap);
+
+    const searchableChunks = [
+      fullName,
+      jobTitle,
+      company,
+      department,
+      taxId,
+      notes,
+      ...phones.map((p) => p.value),
+      ...emails.map((e) => e.value),
+      ...addresses.map((a) => a.value),
+      ...websites.map((w) => w.value),
+      ...customFields.map((c) => `${c.label} ${c.value}`),
+      ...assignedTags.map((t) => t.displayName)
+    ];
+
+    const updatedContact = {
+      contactId: cid,
+      fullName,
+      company,
+      jobTitle,
+      department,
+      taxId,
+      notes,
+      phones,
+      emails,
+      addresses,
+      websites,
+      customFields,
+      allFields,
+      tags: assignedTags,
+      images,
+      createdAt: existingContact ? existingContact.createdAt : nowIso,
+      updatedAt: nowIso,
+      searchIndexText: searchableChunks.join(' ').toLowerCase()
+    };
+
+    if (existingContact) {
+      const idx = state.contacts.findIndex((c) => c.contactId === cid);
+      state.contacts[idx] = updatedContact;
+    } else {
+      state.contacts.unshift(updatedContact);
+    }
+
+    await persistCurrentState();
+    renderApp();
+    document.getElementById('editContactModal').classList.add('hidden');
+    showToast(existingContact ? '✅ 名片資料已更新並保存於本機' : '✅ 已新增名片並保存於本機');
+  }
+
+  async function deleteActiveContact() {
+    if (!state.activeContact) return;
+    const cid = state.activeContact.contactId;
+    if (!confirm(`確定要刪除「${state.activeContact.fullName}」這張名片嗎？`)) return;
+
+    state.contacts = state.contacts.filter((c) => c.contactId !== cid);
+    await persistCurrentState();
+    document.getElementById('detailModal').classList.add('hidden');
+    renderApp();
+    showToast('🗑️ 名片已刪除');
+  }
+
   // --- Backup ZIP & SQLite Loading Pipeline (Supports Plain & SQLCipher-AES256) ---
   async function processLoadedDatabaseAndImages(rawDbBytes, manifest, imageEntriesMap, passphrase) {
     let plainDbBytes = rawDbBytes;
@@ -652,6 +1194,8 @@
     state.tagCatalog = parsed.tagCatalog;
     state.customFields = parsed.customFields;
     state.manifest = effectiveManifest;
+    state.imageEntriesMap = imageEntriesMap || new Map();
+    if (passphrase) state.currentMasterPassword = passphrase;
     state.selectedTagId = '__ALL__';
 
     rebuildImageObjectUrls(imageEntriesMap);
@@ -816,7 +1360,7 @@
     localStorage.setItem('majiocr_google_client_id', clientId);
 
     const redirectUri = window.location.origin + window.location.pathname;
-    const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.readonly');
+    const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly');
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(clientId)}` +
@@ -1049,6 +1593,50 @@
     };
 
     imageLightbox.onclick = () => imageLightbox.classList.add('hidden');
+
+    const headerAddBtn = document.getElementById('headerAddContactBtn');
+    if (headerAddBtn) headerAddBtn.onclick = openCreateContactModal;
+
+    const exportZipBtn = document.getElementById('exportZipBackupBtn');
+    if (exportZipBtn) exportZipBtn.onclick = exportBackupZip;
+
+    const exportAllVcfBtn = document.getElementById('exportAllVcfBtn');
+    if (exportAllVcfBtn) exportAllVcfBtn.onclick = () => exportContactsToVcf(state.contacts, 'majiocr_all_contacts.vcf');
+
+    const uploadDriveBtn = document.getElementById('uploadDriveBackupBtn');
+    if (uploadDriveBtn) uploadDriveBtn.onclick = uploadBackupToGoogleDrive;
+
+    const closeEditBtn = document.getElementById('closeEditModalBtn');
+    if (closeEditBtn) closeEditBtn.onclick = () => document.getElementById('editContactModal').classList.add('hidden');
+
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    if (cancelEditBtn) cancelEditBtn.onclick = () => document.getElementById('editContactModal').classList.add('hidden');
+
+    const editBackdrop = document.getElementById('editModalBackdrop');
+    if (editBackdrop) editBackdrop.onclick = () => document.getElementById('editContactModal').classList.add('hidden');
+
+    const editForm = document.getElementById('editContactForm');
+    if (editForm) editForm.onsubmit = handleSaveContactForm;
+
+    const addDynRowBtn = document.getElementById('addContactValueRowBtn');
+    if (addDynRowBtn) addDynRowBtn.onclick = () => addDynamicValueRow('Phone', '電話', '');
+
+    const addNewTagBtn = document.getElementById('addNewTagBtn');
+    if (addNewTagBtn) addNewTagBtn.onclick = handleAddNewTag;
+
+    const pickFrontBtn = document.getElementById('pickFrontPhotoBtn');
+    const frontInput = document.getElementById('frontPhotoInput');
+    const removeFrontBtn = document.getElementById('removeFrontPhotoBtn');
+    if (pickFrontBtn && frontInput) pickFrontBtn.onclick = () => frontInput.click();
+    if (frontInput) frontInput.onchange = (e) => e.target.files && e.target.files[0] && handlePhotoSelected('front', e.target.files[0]);
+    if (removeFrontBtn) removeFrontBtn.onclick = () => removePhoto('front');
+
+    const pickBackBtn = document.getElementById('pickBackPhotoBtn');
+    const backInput = document.getElementById('backPhotoInput');
+    const removeBackBtn = document.getElementById('removeBackPhotoBtn');
+    if (pickBackBtn && backInput) pickBackBtn.onclick = () => backInput.click();
+    if (backInput) backInput.onchange = (e) => e.target.files && e.target.files[0] && handlePhotoSelected('back', e.target.files[0]);
+    if (removeBackBtn) removeBackBtn.onclick = () => removePhoto('back');
 
     // Load cached database from iPhone IndexedDB on startup
     const cached = await loadFromIndexedDb();

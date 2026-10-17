@@ -1,4 +1,4 @@
-const CACHE_NAME = 'majiocr-web-v0.1.0-beta.1';
+const CACHE_NAME = 'majiocr-web-v0.2.0-beta.1';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,8 @@ const ASSETS = [
   './js/zip-reader.js',
   './js/sqlcipher-decryptor.js',
   './js/sqlite-parser.js',
+  './js/sql-wasm.js',
+  './js/sqlite-builder.js',
   './js/app.js'
 ];
 

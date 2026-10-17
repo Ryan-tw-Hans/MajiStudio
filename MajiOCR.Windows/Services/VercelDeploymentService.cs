@@ -64,6 +64,8 @@ public class VercelDeploymentService : IVercelDeploymentService
         ("js/zip-reader.js", "MajiOCR.Web.js.zip-reader.js"),
         ("js/sqlcipher-decryptor.js", "MajiOCR.Web.js.sqlcipher-decryptor.js"),
         ("js/sqlite-parser.js", "MajiOCR.Web.js.sqlite-parser.js"),
+        ("js/sql-wasm.js", "MajiOCR.Web.js.sql-wasm.js"),
+        ("js/sqlite-builder.js", "MajiOCR.Web.js.sqlite-builder.js"),
         ("js/app.js", "MajiOCR.Web.js.app.js")
     };
 

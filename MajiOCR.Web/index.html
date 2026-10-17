@@ -20,12 +20,17 @@
       <div class="brand-group">
         <img src="./icon.svg" alt="MajiOCR" class="brand-logo" />
         <span class="brand-title">MajiOCR</span>
-        <span class="count-pill" style="background: rgba(255,255,255,0.18); font-size: 11px;">v0.1.0-beta.1</span>
+        <span class="count-pill" style="background: rgba(255,255,255,0.18); font-size: 11px;">v0.2.0-beta.1</span>
         <span id="headerTotalCount" class="count-pill">0 筆</span>
       </div>
-      <button type="button" id="openSyncModalBtn" class="btn-sync-header">
-        <span>☁️</span><span>載入/同步資料庫</span>
-      </button>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" id="headerAddContactBtn" class="btn-sync-header" style="background: rgba(255,255,255,0.22);">
+          <span>➕</span><span>新增名片</span>
+        </button>
+        <button type="button" id="openSyncModalBtn" class="btn-sync-header">
+          <span>☁️</span><span>載入/同步</span>
+        </button>
+      </div>
     </div>
 
     <!-- Compound Search & Sort Bar -->
@@ -131,6 +136,27 @@
           </div>
           <div id="driveBackupList"></div>
         </div>
+
+        <!-- Pipeline 3: Export & Google Drive Cloud Sync -->
+        <div class="pipeline-box" style="border: 2px solid #0F6CBD; background: #F0F7FF;">
+          <div class="pipeline-title" style="color: #0F6CBD;">📤 管道 ③：備份匯出與 Google Drive 雲端同步</div>
+          <div class="pipeline-sub">
+            將您在 iPhone 編輯、新增後的最新資料庫打包匯出，或直接一鍵同步回雲端 <code>MajiOCR_Backups</code> 資料夾。
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" id="uploadDriveBackupBtn" class="btn-primary" style="width: 100%;">
+              ☁️ 上傳最新備份至 Google Drive
+            </button>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" id="exportZipBackupBtn" class="btn-secondary" style="flex: 1;">
+                📦 匯出備份 (.zip)
+              </button>
+              <button type="button" id="exportAllVcfBtn" class="btn-secondary" style="flex: 1;">
+                📇 匯出全部通訊錄 (.vcf)
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -171,7 +197,101 @@
         <span class="sheet-title">📇 名片詳細資訊</span>
         <button type="button" id="closeDetailModalBtn" class="btn-close-sheet">✕</button>
       </div>
+      <div class="detail-actions-bar">
+        <button type="button" id="editContactBtn" class="btn-primary btn-sm">✏️ 編輯名片</button>
+        <button type="button" id="exportSingleVcfBtn" class="btn-secondary btn-sm">📇 加入手機通訊錄 (.vcf)</button>
+        <button type="button" id="deleteContactBtn" class="btn-secondary btn-sm" style="color: #DC2626;">🗑️ 刪除</button>
+      </div>
       <div id="detailSheetBody" class="sheet-body"></div>
+    </div>
+  </div>
+
+  <!-- Contact Edit / Create Bottom Sheet -->
+  <div id="editContactModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div id="editModalBackdrop" class="modal-backdrop"></div>
+    <div class="bottom-sheet edit-sheet">
+      <div class="sheet-header">
+        <span id="editModalTitle" class="sheet-title">✏️ 編輯名片</span>
+        <button type="button" id="closeEditModalBtn" class="btn-close-sheet">✕</button>
+      </div>
+      <form id="editContactForm" class="sheet-body edit-form">
+        <!-- Photo Section -->
+        <div class="form-section-title">📷 名片原圖 (點擊拍照或從相簿選取)</div>
+        <div class="photo-picker-grid">
+          <div class="photo-picker-box" id="frontPhotoBox">
+            <div class="photo-box-label">正面名片</div>
+            <img id="frontPhotoPreview" class="photo-preview hidden" alt="正面預覽" />
+            <div id="frontPhotoPlaceholder" class="photo-placeholder">📷 拍攝/選取正面</div>
+            <input type="file" id="frontPhotoInput" accept="image/*" class="hidden" />
+            <div class="photo-box-actions">
+              <button type="button" id="pickFrontPhotoBtn" class="btn-xs">選擇照片</button>
+              <button type="button" id="removeFrontPhotoBtn" class="btn-xs btn-danger hidden">移除</button>
+            </div>
+          </div>
+          <div class="photo-picker-box" id="backPhotoBox">
+            <div class="photo-box-label">反面名片</div>
+            <img id="backPhotoPreview" class="photo-preview hidden" alt="反面預覽" />
+            <div id="backPhotoPlaceholder" class="photo-placeholder">📷 拍攝/選取反面</div>
+            <input type="file" id="backPhotoInput" accept="image/*" class="hidden" />
+            <div class="photo-box-actions">
+              <button type="button" id="pickBackPhotoBtn" class="btn-xs">選擇照片</button>
+              <button type="button" id="removeBackPhotoBtn" class="btn-xs btn-danger hidden">移除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic Info Section -->
+        <div class="form-section-title">👤 基本資訊</div>
+        <div class="form-field">
+          <label class="form-label" for="editFullName">姓名 <span style="color: #DC2626;">*</span></label>
+          <input type="text" id="editFullName" class="form-input" required placeholder="請輸入聯絡人姓名" />
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label" for="editCompany">公司名稱</label>
+            <input type="text" id="editCompany" class="form-input" placeholder="公司名稱" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="editJobTitle">職稱</label>
+            <input type="text" id="editJobTitle" class="form-input" placeholder="職稱" />
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="form-field">
+            <label class="form-label" for="editDepartment">部門</label>
+            <input type="text" id="editDepartment" class="form-input" placeholder="部門" />
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="editTaxId">統一編號</label>
+            <input type="text" id="editTaxId" class="form-input" placeholder="8碼統編" />
+          </div>
+        </div>
+
+        <!-- Dynamic Contact Values -->
+        <div class="form-section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>📞 聯絡方式</span>
+          <button type="button" id="addContactValueRowBtn" class="btn-xs btn-secondary">➕ 新增欄位</button>
+        </div>
+        <div id="dynamicValuesContainer" class="dynamic-values-list"></div>
+
+        <!-- Tag Selection -->
+        <div class="form-section-title">🏷️ 分類標籤</div>
+        <div id="editTagsContainer" class="edit-tags-container"></div>
+        <div class="add-tag-row">
+          <input type="text" id="newTagInput" class="form-input" placeholder="新增自訂標籤名稱..." style="margin-bottom: 0;" />
+          <button type="button" id="addNewTagBtn" class="btn-secondary" style="white-space: nowrap;">新增標籤</button>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-section-title">📝 備註</div>
+        <textarea id="editNotes" class="form-textarea" rows="3" placeholder="輸入備註事項、談話細節..."></textarea>
+
+        <!-- Form Buttons -->
+        <div class="edit-form-bottom-actions">
+          <button type="button" id="cancelEditBtn" class="btn-secondary" style="flex: 1;">取消</button>
+          <button type="submit" id="saveContactSubmitBtn" class="btn-primary" style="flex: 2;">💾 儲存名片</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -187,6 +307,8 @@
   <script src="./js/zip-reader.js"></script>
   <script src="./js/sqlcipher-decryptor.js"></script>
   <script src="./js/sqlite-parser.js"></script>
+  <script src="./js/sql-wasm.js"></script>
+  <script src="./js/sqlite-builder.js"></script>
   <script src="./js/app.js"></script>
 </body>
 </html>

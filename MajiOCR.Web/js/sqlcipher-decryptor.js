@@ -222,8 +222,110 @@
     return output;
   }
 
+  async function encryptSqlCipher4Database(plainBytesInput, passphrase, onProgress) {
+    const plainDb = plainBytesInput instanceof Uint8Array ? plainBytesInput : new Uint8Array(plainBytesInput);
+    if (!passphrase || passphrase.length === 0) {
+      return plainDb;
+    }
+
+    if (plainDb.length < PAGE_SIZE || plainDb.length % PAGE_SIZE !== 0) {
+      throw new Error(`明文資料庫長度異常 (${plainDb.length} bytes)，非有效 4096-byte SQLite 頁面檔案。`);
+    }
+
+    const subtle = global.crypto && global.crypto.subtle;
+    if (!subtle) {
+      throw new Error('目前瀏覽器環境不支援 WebCrypto API (需使用 HTTPS 或 localhost 開啟)。');
+    }
+
+    const encoder = new TextEncoder();
+    const passBytes = encoder.encode(passphrase);
+    const kdfSalt = new Uint8Array(SALT_SIZE);
+    if (global.crypto.getRandomValues) {
+      global.crypto.getRandomValues(kdfSalt);
+    } else {
+      for (let i = 0; i < SALT_SIZE; i++) kdfSalt[i] = (Math.random() * 256) & 0xff;
+    }
+
+    if (onProgress) onProgress(10, '正在衍生 SQLCipher-AES256 加密金鑰...');
+
+    // 1. Derive 32-byte AES-256 key (256,000 iterations PBKDF2-HMAC-SHA512)
+    const baseKey = await subtle.importKey('raw', passBytes, 'PBKDF2', false, ['deriveBits']);
+    const rawEncKeyBits = await subtle.deriveBits(
+      { name: 'PBKDF2', salt: kdfSalt, iterations: KDF_ITERATIONS, hash: 'SHA-512' },
+      baseKey,
+      256
+    );
+    const aesKey = await subtle.importKey('raw', rawEncKeyBits, { name: 'AES-CBC' }, false, ['encrypt']);
+
+    // 2. Derive 32-byte HMAC key (2 iterations PBKDF2-HMAC-SHA512)
+    const hmacSalt = new Uint8Array(SALT_SIZE);
+    for (let i = 0; i < SALT_SIZE; i++) hmacSalt[i] = kdfSalt[i] ^ 0x3a;
+    const baseHmacKey = await subtle.importKey('raw', rawEncKeyBits, 'PBKDF2', false, ['deriveBits']);
+    const rawHmacBits = await subtle.deriveBits(
+      { name: 'PBKDF2', salt: hmacSalt, iterations: HMAC_KDF_ITERATIONS, hash: 'SHA-512' },
+      baseHmacKey,
+      256
+    );
+    const hmacKey = await subtle.importKey('raw', rawHmacBits, { name: 'HMAC', hash: 'SHA-512' }, false, ['sign']);
+
+    const totalPages = Math.floor(plainDb.length / PAGE_SIZE);
+    const encrypted = new Uint8Array(plainDb.length);
+    const activeReserveSize = RESERVE_SIZE; // 80 bytes
+    const cipherEnd = PAGE_SIZE - activeReserveSize; // 4016 bytes
+
+    for (let pageNo = 1; pageNo <= totalPages; pageNo++) {
+      const pageStart = (pageNo - 1) * PAGE_SIZE;
+      const plainChunk = pageNo === 1
+        ? plainDb.subarray(16, cipherEnd)
+        : plainDb.subarray(pageStart, pageStart + cipherEnd);
+
+      const iv = new Uint8Array(IV_SIZE);
+      if (global.crypto.getRandomValues) {
+        global.crypto.getRandomValues(iv);
+      } else {
+        for (let i = 0; i < IV_SIZE; i++) iv[i] = (Math.random() * 256) & 0xff;
+      }
+
+      // WebCrypto AES-CBC encrypt (unpadded slice)
+      const encBuf = await subtle.encrypt({ name: 'AES-CBC', iv }, aesKey, plainChunk);
+      const ciphertext = new Uint8Array(encBuf, 0, plainChunk.length);
+
+      // HMAC-SHA512(hmac_key, ciphertext || iv || pageNo_LE32)
+      const hmacInput = new Uint8Array(ciphertext.length + IV_SIZE + 4);
+      hmacInput.set(ciphertext, 0);
+      hmacInput.set(iv, ciphertext.length);
+      const pOffset = ciphertext.length + IV_SIZE;
+      hmacInput[pOffset] = pageNo & 0xff;
+      hmacInput[pOffset + 1] = (pageNo >>> 8) & 0xff;
+      hmacInput[pOffset + 2] = (pageNo >>> 16) & 0xff;
+      hmacInput[pOffset + 3] = (pageNo >>> 24) & 0xff;
+
+      const fullHmacBuf = await subtle.sign('HMAC', hmacKey, hmacInput);
+      const hmac = new Uint8Array(fullHmacBuf, 0, HMAC_SIZE);
+
+      if (pageNo === 1) {
+        encrypted.set(kdfSalt, 0);
+        encrypted.set(ciphertext, SALT_SIZE);
+        encrypted.set(iv, cipherEnd);
+        encrypted.set(hmac, cipherEnd + IV_SIZE);
+      } else {
+        encrypted.set(ciphertext, pageStart);
+        encrypted.set(iv, pageStart + cipherEnd);
+        encrypted.set(hmac, pageStart + cipherEnd + IV_SIZE);
+      }
+
+      if (onProgress && (pageNo === 1 || pageNo % 10 === 0 || pageNo === totalPages)) {
+        const pct = 20 + Math.round((pageNo / totalPages) * 70);
+        onProgress(pct, `正在加密資料庫頁面 (${pageNo}/${totalPages})...`);
+      }
+    }
+
+    return encrypted;
+  }
+
   global.MajiSqlCipher = {
     isPlainSqliteBuffer,
-    decryptSqlCipher4Database
+    decryptSqlCipher4Database,
+    encryptSqlCipher4Database
   };
 })(typeof window !== 'undefined' ? window : globalThis);
