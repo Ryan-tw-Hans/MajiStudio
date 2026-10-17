@@ -22,7 +22,7 @@ namespace MajiOCR_Windows;
 /// 支援：
 ///   1. 🌟 推薦：GitHub Pages 官方免設定公用版（即時 QR Code 掃描加入 iPhone 主畫面）
 ///   2. ⚡ 自訂：部署至個人 Vercel 免費雲端帳號
-/// 符合 RS-ISSUE-0044、RS-ISSUE-0047、AR-ISSUE-0047 與 DP-ISSUE-0047。
+/// 符合 RS-ISSUE-0044、RS-ISSUE-0047、RS-ISSUE-0048、AR-ISSUE-0048 與 DP-ISSUE-0048。
 /// </summary>
 public static class VercelDeployDialog
 {
@@ -36,38 +36,72 @@ public static class VercelDeployDialog
         var deployService = customDeploymentService ?? new VercelDeploymentService();
         var currentSettings = settingsService.LoadSettings();
 
+        // 頂層容器：寬度自動延展填滿對話框，增加內部間距與舒適邊界
         var rootStack = new StackPanel
         {
-            Spacing = 14,
-            Width = 560
+            Spacing = 16,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(2, 0, 6, 0)
         };
 
-        // --- Top Mode Switcher (GitHub Pages vs. Vercel) ---
-        var modeSwitchRow = new StackPanel
+        // --- Top Mode Switcher (GitHub Pages vs. Vercel) - 等寬 Grid 平分，保證零截字 ---
+        var modeGrid = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 10,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(0, 0, 0, 4)
+            ColumnSpacing = 12,
+            Margin = new Thickness(0, 0, 0, 4),
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
+        modeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        modeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
         var modeGhpBtn = new Button
         {
             Content = "🌟 推薦：官方公用免設定版 (GitHub Pages)",
-            Padding = new Thickness(14, 8, 14, 8),
-            FontWeight = FontWeights.SemiBold
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(14, 10, 14, 10),
+            FontWeight = FontWeights.SemiBold,
+            CornerRadius = new CornerRadius(6)
         };
+        Grid.SetColumn(modeGhpBtn, 0);
 
         var modeVercelBtn = new Button
         {
             Content = "⚡ 自訂：部署至個人 Vercel",
-            Padding = new Thickness(14, 8, 14, 8),
-            FontWeight = FontWeights.Normal
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Padding = new Thickness(14, 10, 14, 10),
+            FontWeight = FontWeights.Normal,
+            CornerRadius = new CornerRadius(6)
         };
+        Grid.SetColumn(modeVercelBtn, 1);
 
-        modeSwitchRow.Children.Add(modeGhpBtn);
-        modeSwitchRow.Children.Add(modeVercelBtn);
-        rootStack.Children.Add(modeSwitchRow);
+        modeGrid.Children.Add(modeGhpBtn);
+        modeGrid.Children.Add(modeVercelBtn);
+        rootStack.Children.Add(modeGrid);
+
+        void UpdateButtonStyles(bool isGhp)
+        {
+            if (isGhp)
+            {
+                modeGhpBtn.FontWeight = FontWeights.SemiBold;
+                modeGhpBtn.BorderBrush = new SolidColorBrush(Colors.MediumSeaGreen);
+                modeGhpBtn.BorderThickness = new Thickness(2);
+
+                modeVercelBtn.FontWeight = FontWeights.Normal;
+                modeVercelBtn.BorderThickness = new Thickness(1);
+                modeVercelBtn.BorderBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128));
+            }
+            else
+            {
+                modeGhpBtn.FontWeight = FontWeights.Normal;
+                modeGhpBtn.BorderThickness = new Thickness(1);
+                modeGhpBtn.BorderBrush = new SolidColorBrush(Color.FromArgb(60, 128, 128, 128));
+
+                modeVercelBtn.FontWeight = FontWeights.SemiBold;
+                modeVercelBtn.BorderBrush = new SolidColorBrush(Colors.DodgerBlue);
+                modeVercelBtn.BorderThickness = new Thickness(2);
+            }
+        }
+        UpdateButtonStyles(true);
 
         // Helper to render QR code bitmap
         async Task RenderQrCodeAsync(Image targetImg, string url)
@@ -89,20 +123,21 @@ public static class VercelDeployDialog
         // =========================================================================
         // PANEL 1: GitHub Pages 官方免設定版 (預設可見)
         // =========================================================================
-        var ghpPanel = new StackPanel { Spacing = 12 };
+        var ghpPanel = new StackPanel { Spacing = 14 };
 
         var ghpIntroBorder = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 10, 12, 10),
-            Background = new SolidColorBrush(Color.FromArgb(25, 16, 185, 129)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(80, 16, 185, 129)),
+            Padding = new Thickness(14, 12, 14, 12),
+            Background = new SolidColorBrush(Color.FromArgb(28, 16, 185, 129)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 16, 185, 129)),
             BorderThickness = new Thickness(1),
             Child = new TextBlock
             {
                 Text = "💡 免註冊任何帳號、免申請 Token！直接拿起 iPhone 相機對準下方 QR Code 即可一鍵開啟 MajiOCR 行動版並加入主畫面。名片資料庫與解密金鑰 100% 保存在您各自的手機本機與個人 Google Drive，完全隔離且保護隱私。",
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 12.5
+                FontSize = 13,
+                LineHeight = 20
             }
         };
         ghpPanel.Children.Add(ghpIntroBorder);
@@ -110,8 +145,8 @@ public static class VercelDeployDialog
         // GitHub Pages QR Code Container
         var ghpQrImage = new Image
         {
-            Width = 240,
-            Height = 240,
+            Width = 230,
+            Height = 230,
             HorizontalAlignment = HorizontalAlignment.Center,
             Stretch = Stretch.Uniform
         };
@@ -120,8 +155,8 @@ public static class VercelDeployDialog
             Background = new SolidColorBrush(Colors.White),
             BorderBrush = new SolidColorBrush(Color.FromArgb(50, 128, 128, 128)),
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12),
             HorizontalAlignment = HorizontalAlignment.Center,
             Child = ghpQrImage
         };
@@ -142,9 +177,21 @@ public static class VercelDeployDialog
             Orientation = Orientation.Horizontal,
             Spacing = 10
         };
-        var ghpCopyBtn = new Button { Content = "📋 複製網址" };
-        var ghpOpenBtn = new Button { Content = "🌐 在瀏覽器開啟預覽" };
-        var ghpRefreshQrBtn = new Button { Content = "🔄 重新產生 QR Code" };
+        var ghpCopyBtn = new Button
+        {
+            Content = "📋 複製網址",
+            Padding = new Thickness(12, 8, 12, 8)
+        };
+        var ghpOpenBtn = new Button
+        {
+            Content = "🌐 在瀏覽器開啟預覽",
+            Padding = new Thickness(12, 8, 12, 8)
+        };
+        var ghpRefreshQrBtn = new Button
+        {
+            Content = "🔄 重新產生 QR Code",
+            Padding = new Thickness(12, 8, 12, 8)
+        };
         ghpActionsRow.Children.Add(ghpCopyBtn);
         ghpActionsRow.Children.Add(ghpOpenBtn);
         ghpActionsRow.Children.Add(ghpRefreshQrBtn);
@@ -152,7 +199,7 @@ public static class VercelDeployDialog
 
         var ghpStatusText = new TextBlock
         {
-            FontSize = 12,
+            FontSize = 12.5,
             Foreground = new SolidColorBrush(Colors.SeaGreen),
             Visibility = Visibility.Collapsed
         };
@@ -162,7 +209,7 @@ public static class VercelDeployDialog
         var ghpStepsBorder = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            Padding = new Thickness(14, 12, 14, 12),
             Background = new SolidColorBrush(Color.FromArgb(15, 128, 128, 128)),
             Child = new TextBlock
             {
@@ -172,8 +219,9 @@ public static class VercelDeployDialog
                        "3. 手機桌面上即會建立 MajiOCR 圖示，點擊即可全螢幕秒速離線開啟。\n" +
                        "4. 點擊頂部「☁️ 載入/同步資料庫」➔ 可選擇直接登入 Google Drive 或從 iPhone「檔案」App 選取 Windows 匯出的備份檔（支援輸入 SQLCipher 主密碼解密）。",
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 12,
-                Opacity = 0.9
+                FontSize = 12.5,
+                Opacity = 0.9,
+                LineHeight = 19
             }
         };
         ghpPanel.Children.Add(ghpStepsBorder);
@@ -185,28 +233,29 @@ public static class VercelDeployDialog
         // =========================================================================
         var vercelPanel = new StackPanel
         {
-            Spacing = 12,
+            Spacing = 14,
             Visibility = Visibility.Collapsed
         };
 
         var vercelIntroBorder = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12, 10, 12, 10),
-            Background = new SolidColorBrush(Color.FromArgb(25, 15, 108, 189)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(80, 15, 108, 189)),
+            Padding = new Thickness(14, 12, 14, 12),
+            Background = new SolidColorBrush(Color.FromArgb(28, 15, 108, 189)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(90, 15, 108, 189)),
             BorderThickness = new Thickness(1),
             Child = new TextBlock
             {
                 Text = "💡 本精靈會將內建的「MajiOCR iOS 行動網頁版 (PWA)」自動部署至您個人的免費 Vercel 雲端帳號，並產生專屬網址與 QR Code。名片資料庫保存在您的 Google Drive 與 iPhone 本機，絕不上傳至 Vercel。",
                 TextWrapping = TextWrapping.Wrap,
-                FontSize = 12.5
+                FontSize = 13,
+                LineHeight = 20
             }
         };
         vercelPanel.Children.Add(vercelIntroBorder);
 
         // Step 1: Register / Login Vercel & Get Access Token
-        var step1Stack = new StackPanel { Spacing = 8 };
+        var step1Stack = new StackPanel { Spacing = 10 };
         step1Stack.Children.Add(new TextBlock
         {
             Text = "步驟 1：註冊／登入 Vercel 並取得 Access Token",
@@ -217,8 +266,9 @@ public static class VercelDeployDialog
         {
             Text = "1. 若尚無帳號，請點擊下方按鈕免費註冊 Vercel（支援直接使用 GitHub / Google 帳號登入）。\n2. 登入後點擊「前往建立 Access Token」，點選 Create（Scope 選 Full Account），複製產生的 Token 貼入下方：",
             TextWrapping = TextWrapping.Wrap,
-            FontSize = 12,
-            Opacity = 0.85
+            FontSize = 12.5,
+            Opacity = 0.9,
+            LineHeight = 18
         });
 
         var browserBtnRow = new StackPanel
@@ -230,14 +280,14 @@ public static class VercelDeployDialog
         var signupBtn = new Button
         {
             Content = "🌐 1. 前往 Vercel 註冊 / 登入",
-            Padding = new Thickness(12, 6, 12, 6)
+            Padding = new Thickness(12, 7, 12, 7)
         };
         signupBtn.Click += (_, _) => deployService.OpenVercelSignupPage();
 
         var tokenPageBtn = new Button
         {
             Content = "🔑 2. 前往建立 Access Token",
-            Padding = new Thickness(12, 6, 12, 6)
+            Padding = new Thickness(12, 7, 12, 7)
         };
         tokenPageBtn.Click += (_, _) => deployService.OpenVercelTokensPage();
 
@@ -257,7 +307,7 @@ public static class VercelDeployDialog
         var step1Border = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            Padding = new Thickness(14),
             BorderBrush = new SolidColorBrush(Color.FromArgb(50, 128, 128, 128)),
             BorderThickness = new Thickness(1),
             Child = step1Stack
@@ -265,7 +315,7 @@ public static class VercelDeployDialog
         vercelPanel.Children.Add(step1Border);
 
         // Step 2: Project Name & Optional Web Google OAuth Client ID
-        var step2Stack = new StackPanel { Spacing = 8 };
+        var step2Stack = new StackPanel { Spacing = 12 };
         step2Stack.Children.Add(new TextBlock
         {
             Text = "步驟 2：設定專案名稱並一鍵導入部署至 Vercel",
@@ -283,20 +333,36 @@ public static class VercelDeployDialog
         };
         step2Stack.Children.Add(projectNameBox);
 
+        // 拆分解構 Header 與說明文字，避免 WinUI 3 TextBox Header 換行導致的排版錯位疊加
+        var webClientIdStack = new StackPanel { Spacing = 4 };
+        webClientIdStack.Children.Add(new TextBlock
+        {
+            Text = "Web 端 Google OAuth Client ID（選填，供 iPhone 直接登入 Google Drive）",
+            FontSize = 12.5,
+            FontWeight = FontWeights.Medium
+        });
+        webClientIdStack.Children.Add(new TextBlock
+        {
+            Text = "若留空，iPhone 仍可透過「檔案」App 或 AirDrop 載入名片備份檔；若填入則可直接於網頁登入 Google 雲端硬碟同步。",
+            FontSize = 11.5,
+            Opacity = 0.75,
+            TextWrapping = TextWrapping.Wrap
+        });
         var webClientIdBox = new TextBox
         {
-            Header = "Web 端 Google OAuth Client ID（選填，供 iPhone 直接登入 Google Drive）",
-            PlaceholderText = "例如：123456789-xxxx.apps.googleusercontent.com（留空仍可用 iPhone 檔案 App 匯入備份）",
+            PlaceholderText = "例如：123456789-xxxx.apps.googleusercontent.com",
             Text = currentSettings.VercelWebGoogleClientId ?? string.Empty
         };
-        step2Stack.Children.Add(webClientIdBox);
+        webClientIdStack.Children.Add(webClientIdBox);
+        step2Stack.Children.Add(webClientIdStack);
 
         var deployBtn = new Button
         {
             Content = "🚀 一鍵導入專案並發布至 Vercel",
             HorizontalAlignment = HorizontalAlignment.Stretch,
-            Padding = new Thickness(14, 10, 14, 10),
-            FontWeight = FontWeights.SemiBold
+            Padding = new Thickness(16, 11, 16, 11),
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 4, 0, 0)
         };
         if (Application.Current?.Resources?.ContainsKey("AccentButtonStyle") == true &&
             Application.Current.Resources["AccentButtonStyle"] is Style accentStyle)
@@ -309,7 +375,8 @@ public static class VercelDeployDialog
         {
             Orientation = Orientation.Horizontal,
             Spacing = 10,
-            Visibility = Visibility.Collapsed
+            Visibility = Visibility.Collapsed,
+            Margin = new Thickness(0, 4, 0, 0)
         };
         var progressRing = new ProgressRing
         {
@@ -322,7 +389,7 @@ public static class VercelDeployDialog
             TextWrapping = TextWrapping.Wrap,
             VerticalAlignment = VerticalAlignment.Center,
             FontSize = 12.5,
-            MaxWidth = 490
+            MaxWidth = 600
         };
         statusRow.Children.Add(progressRing);
         statusRow.Children.Add(statusText);
@@ -331,7 +398,7 @@ public static class VercelDeployDialog
         var step2Border = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            Padding = new Thickness(14),
             BorderBrush = new SolidColorBrush(Color.FromArgb(50, 128, 128, 128)),
             BorderThickness = new Thickness(1),
             Child = step2Stack
@@ -339,7 +406,7 @@ public static class VercelDeployDialog
         vercelPanel.Children.Add(step2Border);
 
         // Step 3: Deployed URL & iPhone Installation QR Code
-        var step3Stack = new StackPanel { Spacing = 8 };
+        var step3Stack = new StackPanel { Spacing = 10 };
         step3Stack.Children.Add(new TextBlock
         {
             Text = "步驟 3：使用 iPhone 相機掃描 QR Code 安裝至主畫面",
@@ -360,24 +427,34 @@ public static class VercelDeployDialog
             Orientation = Orientation.Horizontal,
             Spacing = 10
         };
-        var vercelCopyUrlBtn = new Button { Content = "📋 複製網址" };
-        var vercelOpenUrlBtn = new Button { Content = "🌐 在瀏覽器開啟預覽" };
+        var vercelCopyUrlBtn = new Button
+        {
+            Content = "📋 複製網址",
+            Padding = new Thickness(12, 7, 12, 7)
+        };
+        var vercelOpenUrlBtn = new Button
+        {
+            Content = "🌐 在瀏覽器開啟預覽",
+            Padding = new Thickness(12, 7, 12, 7)
+        };
         vercelUrlActionsRow.Children.Add(vercelCopyUrlBtn);
         vercelUrlActionsRow.Children.Add(vercelOpenUrlBtn);
         step3Stack.Children.Add(vercelUrlActionsRow);
 
         var vercelQrImage = new Image
         {
-            Width = 210,
-            Height = 210,
+            Width = 220,
+            Height = 220,
             HorizontalAlignment = HorizontalAlignment.Center,
             Stretch = Stretch.Uniform
         };
         var vercelQrContainer = new Border
         {
             Background = new SolidColorBrush(Colors.White),
-            CornerRadius = new CornerRadius(10),
-            Padding = new Thickness(10),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(50, 128, 128, 128)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(12),
+            Padding = new Thickness(12),
             HorizontalAlignment = HorizontalAlignment.Center,
             Child = vercelQrImage
         };
@@ -386,7 +463,7 @@ public static class VercelDeployDialog
         var step3Border = new Border
         {
             CornerRadius = new CornerRadius(8),
-            Padding = new Thickness(12),
+            Padding = new Thickness(14),
             Background = new SolidColorBrush(Color.FromArgb(20, 16, 185, 129)),
             BorderBrush = new SolidColorBrush(Color.FromArgb(90, 16, 185, 129)),
             BorderThickness = new Thickness(1),
@@ -406,16 +483,13 @@ public static class VercelDeployDialog
             {
                 ghpPanel.Visibility = Visibility.Visible;
                 vercelPanel.Visibility = Visibility.Collapsed;
-                modeGhpBtn.FontWeight = FontWeights.SemiBold;
-                modeVercelBtn.FontWeight = FontWeights.Normal;
             }
             else
             {
                 ghpPanel.Visibility = Visibility.Collapsed;
                 vercelPanel.Visibility = Visibility.Visible;
-                modeGhpBtn.FontWeight = FontWeights.Normal;
-                modeVercelBtn.FontWeight = FontWeights.SemiBold;
             }
+            UpdateButtonStyles(isGhp);
         }
 
         modeGhpBtn.Click += (_, _) => SetMode(true);
@@ -468,6 +542,7 @@ public static class VercelDeployDialog
             pkg.SetText(vercelUrlBox.Text);
             Clipboard.SetContent(pkg);
             statusRow.Visibility = Visibility.Visible;
+            statusText.Foreground = new SolidColorBrush(Colors.SeaGreen);
             statusText.Text = "✅ 已複製專屬網址至剪貼簿！";
         };
 
@@ -540,20 +615,14 @@ public static class VercelDeployDialog
             }
         };
 
-        var scrollViewer = new ScrollViewer
-        {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            MaxHeight = 620,
-            Content = rootStack
-        };
-
         var dialog = new ContentDialog
         {
             XamlRoot = xamlRoot,
             Title = "📱 iOS / Web 行動版設定與部署 (GitHub Pages / Vercel)",
-            Content = scrollViewer,
+            Content = rootStack,
             CloseButtonText = "儲存並關閉",
-            DefaultButton = ContentDialogButton.None
+            DefaultButton = ContentDialogButton.None,
+            MaxWidth = 720
         };
 
         dialog.Closing += (_, _) =>
