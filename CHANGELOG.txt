@@ -1,5 +1,11 @@
 # MajiOCR.Windows 變更紀錄
 
+## [0.1.0.27] - 2026-10-17
+- 新增 iOS / Web 行動版雙模式對話框：整合「🌟 官方免設定版 (GitHub Pages)」與「⚡ 自訂部署 (Vercel)」(ISSUE-0047)
+- 預設提供 GitHub Pages 官方公用版進入點與即時 240x240 高解析度 QR Code，使用者 iPhone 相機一掃即可加入主畫面
+- 新增 GitHub Pages 網址設定持久化與自訂網址即時生成 QR Code 功能
+- 支援 GitHub Actions 自動化工作流程 (.github/workflows/deploy-pages.yml) 發布 MajiOCR.Web 靜態資產
+
 ## [0.1.0.26] - 2026-10-17
 - 全面廢止 Google Drive 更新來源與手動 manifest 流程，改採 GitHub Releases 作為軟體自動檢查與更新機制 (ISSUE-0046)
 - 軟體更新管理員原生支援解析 GitHub Releases API (api.github.com/repos/Ryan-tw-Hans/MajiStudio/releases/latest)，自動讀取最新版本、Markdown 變更紀錄與 ZIP 下載連結

@@ -28,13 +28,13 @@
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
 
     <!-- Candidate Version -->
-    <Version>0.1.0-beta.26</Version>
-    <AssemblyVersion>0.1.0.26</AssemblyVersion>
-    <FileVersion>0.1.0.26</FileVersion>
-    <InformationalVersion>0.1.0-beta.26</InformationalVersion>
+    <Version>0.1.0-beta.27</Version>
+    <AssemblyVersion>0.1.0.27</AssemblyVersion>
+    <FileVersion>0.1.0.27</FileVersion>
+    <InformationalVersion>0.1.0-beta.27</InformationalVersion>
     <Product>MajiOCR.Windows</Product>
     <Company>MajiOCR</Company>
-    <Description>Windows 原生離線名片辨識與固定欄位管理 (0.1.0-beta.26 全面改採 GitHub Releases 自動檢查與套用更新)</Description>
+    <Description>Windows 原生離線名片辨識與固定欄位管理 (0.1.0-beta.27 支援 iOS PWA GitHub Pages 官方免設定版與即時 QR Code)</Description>
   </PropertyGroup>
 
   <ItemGroup>
