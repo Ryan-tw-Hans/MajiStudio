@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "MajiOCR.Windows (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "MajiOCR.Windows (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
