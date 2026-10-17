@@ -99,7 +99,7 @@ flowchart LR
 
 ## 8. 實作後架構符合性
 
-- 受評最終版本：`0.1.0-beta.30` (`0.1.0.30`，單一執行檔 `publish/MajiOCR.Windows/MajiOCR.Windows.exe`，SHA-256: `7ED97B913F5D5952FF6AA26399AEFEA90296500860B99ECB5D792CD646D77D6A`)。
+- 受評最終版本：`0.1.0-beta.30` (`0.1.0.30`，單一執行檔 `publish/MajiOCR.Windows/MajiOCR.Windows.exe`，SHA-256: `0894FB88EBEC0EAC84A02D4A606413284A80F5BD0BB679D3A261E1C297935C3D`)。
 
 | 架構決策／條件 | 實作或測試證據 | 結果 | 偏差與處理 |
 | --- | --- | --- | --- |

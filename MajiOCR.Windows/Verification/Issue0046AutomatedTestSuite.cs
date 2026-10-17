@@ -41,11 +41,11 @@ public static class Issue0046AutomatedTestSuite
         // TC-01: GitHub Releases API JSON 解析測試
         report.TestCases.Add(RunTestCase("TC-01", "驗證 UpdateManifest.Parse 支援原生 GitHub Releases API JSON 格式", () =>
         {
-            string sampleGithubJson = @"
+            string sampleGithubJson = "\uFEFF" + @"
             {
               ""tag_name"": ""v0.1.0.25"",
-              ""name"": ""v0.1.0.25 - 修復文字欄位 Ctrl+V 貼上提示與優化 README 渲染"",
-              ""body"": ""## 🌟 MajiOCR.Windows v0.1.0.25 變更說明\n\nSHA-256: B4D567D45569632E2015AEBB40969F4990E77B27ED66BC15C61541024A091C4F"",
+              ""name"": ""\uFEFFv0.1.0.25 - 修復文字欄位 Ctrl+V 貼上提示與優化 README 渲染"",
+              ""body"": ""\uFEFF## 🌟 MajiOCR.Windows v0.1.0.25 變更說明\n\nSHA-256: B4D567D45569632E2015AEBB40969F4990E77B27ED66BC15C61541024A091C4F"",
               ""published_at"": ""2026-10-16T22:32:35Z"",
               ""assets"": [
                 {
@@ -67,9 +67,9 @@ public static class Issue0046AutomatedTestSuite
             {
                 throw new InvalidOperationException($"SHA256 解析不符: {manifest.Sha256}");
             }
-            if (string.IsNullOrWhiteSpace(manifest.ChangeLog))
+            if (string.IsNullOrWhiteSpace(manifest.ChangeLog) || manifest.ChangeLog.StartsWith('\uFEFF') || (manifest.Description != null && manifest.Description.StartsWith('\uFEFF')))
             {
-                throw new InvalidOperationException("ChangeLog (body) 不應為空");
+                throw new InvalidOperationException("ChangeLog 與 Description 應自動濾除開頭的 \\uFEFF BOM 字元");
             }
         }));
 

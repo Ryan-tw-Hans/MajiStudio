@@ -28,7 +28,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          include-prerelease: true
 
       - name: Restore dependencies
         run: dotnet restore MajiOCR.Windows/MajiOCR.Windows.csproj
@@ -68,13 +67,14 @@ jobs:
         id: extract_notes
         shell: powershell
         run: |
-          $changelog = Get-Content CHANGELOG.txt -Raw -Encoding UTF8
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          $changelog = [System.IO.File]::ReadAllText("CHANGELOG.txt", $utf8NoBom).TrimStart([char]0xFEFF)
           if ($changelog -match "(?s)(## \[[0-9\.]+\][^\r\n]*\r?\n.*?\r?\n)(?=## \[|$)") {
-            $notes = $matches[1].Trim()
+            $notes = $matches[1].Trim().TrimStart([char]0xFEFF)
           } else {
             $notes = "MajiOCR.Windows Release"
           }
-          [System.IO.File]::WriteAllText("release_notes.md", $notes, [System.Text.Encoding]::UTF8)
+          [System.IO.File]::WriteAllText("release_notes.md", $notes, $utf8NoBom)
           Get-Content release_notes.md
 
       - name: Create or Update GitHub Release

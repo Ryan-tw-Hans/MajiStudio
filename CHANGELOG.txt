@@ -1,8 +1,8 @@
 # MajiOCR.Windows 變更紀錄
 
 ## [0.1.0.30] - 2026-10-17
-- 強化本機執行時憑證安全：Google OAuth ClientSecret (`google_oauth_config.json`) 與 Vercel Access Token (`settings.json`) 全面改採 Windows DPAPI (`CryptProtectData` CurrentUser) 加密儲存，並支援既有明文設定自動平滑升級 (ISSUE-0050)
-- 清理公開儲存庫敏感與環境資訊：移除診斷測試中的本機絕對路徑、測試姓名與舊版 Google Drive 資源識別碼，將規格文件連結統一改為相對路徑，並將內部 `IssueLog.sqlite3` 移出 Git 公開追蹤
+- 強化本機執行時憑證安全：Google OAuth ClientSecret (google_oauth_config.json) 與 Vercel Access Token (settings.json) 全面改採 Windows DPAPI (CryptProtectData CurrentUser) 加密儲存，並支援既有明文設定自動平滑升級 (ISSUE-0050)
+- 清理公開儲存庫敏感與環境資訊：移除診斷測試中的本機絕對路徑、測試姓名與舊版 Google Drive 資源識別碼，將規格文件連結統一改為相對路徑，並將內部 IssueLog.sqlite3 移出 Git 公開追蹤
 
 ## [0.1.0.29] - 2026-10-17
 - iOS PWA (MajiOCR.Web v0.2.0-beta.1) 升級支援名片資料編輯、新增名片與照片拍攝/選取 (ISSUE-0049)

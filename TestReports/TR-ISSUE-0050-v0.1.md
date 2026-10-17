@@ -16,7 +16,7 @@
 
 - **總測試數（ISSUE-0050 專項）**：5 項（5 通過 / 0 失敗 / 0 未執行）
 - **回歸測試套件**：6 組套件共 27 項測試全數通過（`ISSUE-0046` 3/3、`ISSUE-0040` 4/4、`ISSUE-0036` 7/7、`ISSUE-0035` 5/5、`ISSUE-0022` 8/8）
-- **單檔發布驗證**：`publish/MajiOCR.Windows/MajiOCR.Windows.exe`（FileVersion `0.1.0.30`，SHA-256 `7ED97B913F5D5952FF6AA26399AEFEA90296500860B99ECB5D792CD646D77D6A`）直接執行 `--test-issue-0050` 與 `--test-issue-0036` 全數通過。
+- **單檔發布驗證**：`publish/MajiOCR.Windows/MajiOCR.Windows.exe`（FileVersion `0.1.0.30`，SHA-256 `0894FB88EBEC0EAC84A02D4A606413284A80F5BD0BB679D3A261E1C297935C3D`）直接執行 `--test-issue-0050`、`--test-issue-0046` 與 `--test-issue-0036` 全數通過。
 - **證據檔案**：[ISSUE-0050_TEST_REPORT.json](evidence/ISSUE-0050/ISSUE-0050_TEST_REPORT.json)
 
 ---

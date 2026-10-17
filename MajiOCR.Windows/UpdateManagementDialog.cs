@@ -62,6 +62,7 @@ public static class UpdateManagementDialog
         {
             Header = "📋 更新內容與變更紀錄 (Change Log)",
             HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
             IsExpanded = true
         };
         var logTextBox = new TextBox
@@ -69,8 +70,10 @@ public static class UpdateManagementDialog
             IsReadOnly = true,
             AcceptsReturn = true,
             TextWrapping = TextWrapping.Wrap,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            FlowDirection = FlowDirection.LeftToRight,
             Height = 160,
-            Text = updateService.LoadLocalChangeLogText()
+            Text = updateService.LoadLocalChangeLogText().TrimStart('\uFEFF')
         };
         logExpander.Content = logTextBox;
         rootStack.Children.Add(logExpander);
@@ -164,12 +167,12 @@ public static class UpdateManagementDialog
 
                     if (!string.IsNullOrWhiteSpace(lastCheckResult.Manifest.ChangeLog))
                     {
-                        logTextBox.Text = lastCheckResult.Manifest.ChangeLog;
+                        logTextBox.Text = lastCheckResult.Manifest.ChangeLog.TrimStart('\uFEFF');
                         logExpander.IsExpanded = true;
                     }
                     else if (!string.IsNullOrWhiteSpace(lastCheckResult.Manifest.Description))
                     {
-                        logTextBox.Text = $"【版本說明】\n{lastCheckResult.Manifest.Description}";
+                        logTextBox.Text = $"【版本說明】\n{lastCheckResult.Manifest.Description.TrimStart('\uFEFF')}";
                         logExpander.IsExpanded = true;
                     }
                 }
@@ -178,7 +181,7 @@ public static class UpdateManagementDialog
                     onlineVerText.Text = $"雲端發布版本：v{lastCheckResult.Manifest.Version}（目前本機 v{updateService.CurrentVersion} 已是最新）";
                     statusText.Text = $"✅ {lastCheckResult.Reason ?? "目前已是最新版本，無需更新。"}";
                     statusText.Foreground = new SolidColorBrush(Colors.DarkSlateGray);
-                    logTextBox.Text = updateService.LoadLocalChangeLogText();
+                    logTextBox.Text = updateService.LoadLocalChangeLogText().TrimStart('\uFEFF');
                 }
             }
             catch (Exception ex)

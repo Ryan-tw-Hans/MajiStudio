@@ -34,6 +34,8 @@ public record UpdateManifest(
 {
     public static UpdateManifest Parse(string json, UpdateChannel channel = UpdateChannel.Release)
     {
+        json = (json ?? string.Empty).TrimStart('\uFEFF').Trim();
+
         // 優先支援 GitHub Releases REST API 格式
         try
         {
@@ -43,8 +45,8 @@ public record UpdateManifest(
             {
                 string tag = tagElem.GetString() ?? "";
                 string version = tag.TrimStart('v', 'V');
-                string? name = root.TryGetProperty("name", out var nameElem) ? nameElem.GetString() : null;
-                string? body = root.TryGetProperty("body", out var bodyElem) ? bodyElem.GetString() : null;
+                string? name = root.TryGetProperty("name", out var nameElem) ? nameElem.GetString()?.TrimStart('\uFEFF').Trim() : null;
+                string? body = root.TryGetProperty("body", out var bodyElem) ? bodyElem.GetString()?.TrimStart('\uFEFF').Trim() : null;
                 string? pubDate = root.TryGetProperty("published_at", out var pubElem) ? pubElem.GetString() : null;
                 if (!string.IsNullOrWhiteSpace(pubDate) && DateTime.TryParse(pubDate, out var dt))
                 {
@@ -104,7 +106,12 @@ public record UpdateManifest(
         var manifest = JsonSerializer.Deserialize<UpdateManifest>(json, options)
             ?? throw new InvalidOperationException("無法解析更新索引 JSON。");
 
-        return manifest with { Channel = channel };
+        return manifest with
+        {
+            Description = manifest.Description?.TrimStart('\uFEFF').Trim(),
+            ChangeLog = manifest.ChangeLog?.TrimStart('\uFEFF').Trim(),
+            Channel = channel
+        };
     }
 }
 

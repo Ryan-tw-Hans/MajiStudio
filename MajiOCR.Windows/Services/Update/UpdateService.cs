@@ -122,7 +122,7 @@ public sealed class UpdateService
             if (stream != null)
             {
                 using var reader = new StreamReader(stream, Encoding.UTF8);
-                var embedded = reader.ReadToEnd().Trim();
+                var embedded = reader.ReadToEnd().TrimStart('\uFEFF').Trim();
                 if (!string.IsNullOrWhiteSpace(embedded))
                 {
                     return embedded;
@@ -134,7 +134,7 @@ public sealed class UpdateService
         var changeLogPath = Path.Combine(_basePath, "CHANGELOG.txt");
         if (File.Exists(changeLogPath))
         {
-            var text = File.ReadAllText(changeLogPath, Encoding.UTF8).Trim();
+            var text = File.ReadAllText(changeLogPath, Encoding.UTF8).TrimStart('\uFEFF').Trim();
             if (!string.IsNullOrWhiteSpace(text))
             {
                 return text;
@@ -586,7 +586,7 @@ public sealed class UpdateService
         {
             using var client = CreateHttpClient();
             var text = await DownloadTextWithRetriesAsync(client, manifest.ChangeLogUrl, "Change Log", cancellationToken);
-            return manifest with { ChangeLog = text.Trim() };
+            return manifest with { ChangeLog = text.TrimStart('\uFEFF').Trim() };
         }
         catch
         {
