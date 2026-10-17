@@ -106,10 +106,10 @@ public static class Issue0024AutomatedTestSuite
             {
                 ContactId = "c1",
                 Name = "王明",
-                Company = "台達",
+                Company = "甲公司",
                 Title = "工程師",
                 Phone = "0912345678",
-                Email = "a@b.c",
+                Email = "a@example.com",
                 Tags = new[] { new TagDefinition("t1", "VIP", 1) }
             }
         };
@@ -125,13 +125,13 @@ public static class Issue0024AutomatedTestSuite
             {
                 ContactId = "c2",
                 Name = "亞歷山大·斯托揚諾夫斯基博士",
-                Company = "台灣積體電路製造股份有限公司竹科研發中心先進半導體製程第十二廠總部",
+                Company = "台灣範例科技製造股份有限公司研發中心先進半導體製程第十二廠總部",
                 Title = "資深研發副總經理兼技術長特助",
                 Phone = "+886-2-23456789 ext. 56789",
                 Email = "alexander.stojanovski.senior.director@global-semiconductor-solutions.example.com",
                 Tags = new[]
                 {
-                    new TagDefinition("t1", "新竹科學園區重點客戶", 1),
+                    new TagDefinition("t1", "科學園區重點客戶", 1),
                     new TagDefinition("t2", "半導體先進製程", 1),
                     new TagDefinition("t3", "VIP策略夥伴", 1),
                     new TagDefinition("t4", "2026年Q3重點專案", 1)

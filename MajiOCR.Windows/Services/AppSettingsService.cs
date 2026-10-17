@@ -65,7 +65,7 @@ public class AppSettingsService : IAppSettingsService
                 }
 
                 byte[] bytes = File.ReadAllBytes(_settingsFilePath);
-                string json = StrictUtf8.GetString(bytes);
+                string json = StrictUtf8.GetString(bytes).TrimStart('\uFEFF');
 
                 var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (settings == null)
@@ -81,6 +81,17 @@ public class AppSettingsService : IAppSettingsService
                 if (!OcrLanguageCatalog.IsValidCode(settings.PartialOcrLanguageCode))
                 {
                     settings.PartialOcrLanguageCode = OcrLanguageCatalog.Mixed5;
+                }
+
+                if (!string.IsNullOrWhiteSpace(settings.VercelAccessToken))
+                {
+                    var (plainToken, wasLegacyPlainText, decryptionFailed) =
+                        CredentialProtectionHelper.UnprotectWithMetadata(settings.VercelAccessToken);
+                    settings.VercelAccessToken = decryptionFailed ? null : plainToken;
+                    if (wasLegacyPlainText && !string.IsNullOrWhiteSpace(plainToken))
+                    {
+                        SaveSettings(settings);
+                    }
                 }
 
                 return settings;
@@ -117,7 +128,21 @@ public class AppSettingsService : IAppSettingsService
                 Directory.CreateDirectory(dir);
             }
 
-            string json = JsonSerializer.Serialize(settings, JsonOptions);
+            string? originalPlainToken = settings.VercelAccessToken;
+            string json;
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(originalPlainToken))
+                {
+                    settings.VercelAccessToken = CredentialProtectionHelper.Protect(originalPlainToken);
+                }
+                json = JsonSerializer.Serialize(settings, JsonOptions);
+            }
+            finally
+            {
+                settings.VercelAccessToken = CredentialProtectionHelper.Unprotect(originalPlainToken);
+            }
+
             string tmpFile = _settingsFilePath + ".tmp." + Guid.NewGuid().ToString("N");
 
             try

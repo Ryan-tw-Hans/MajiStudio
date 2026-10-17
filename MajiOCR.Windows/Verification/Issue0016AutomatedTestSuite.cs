@@ -60,12 +60,12 @@ public static class Issue0016AutomatedTestSuite
         }
 
         // Setup Test Data
-        // Card 1: 王小明, 戊式電子, 資深研發工程師, 0912-345-678, ming@example.com, 專長電源管理, 標籤: [客戶, 台北, 研發]
-        string c1 = await SaveSyntheticCardAsync("王小明", "戊式電子", "資深研發工程師", "0912-345-678", "ming@example.com", "專長電源管理", new[] { "客戶", "台北", "研發" });
-        // Card 2: 李大同, 丁式電腦, 產品經理, 02-2345-6789, dtlee@example.com, 筆電事業群, 標籤: [廠商, 台北]
-        string c2 = await SaveSyntheticCardAsync("李大同", "丁式電腦", "產品經理", "02-2345-6789", "dtlee@example.com", "筆電事業群", new[] { "廠商", "台北" });
-        // Card 3: 張美美, 戊式電子, 行銷協理, 0988-111-222, mm@example.com, 綠能推廣, 標籤: [客戶, 新竹]
-        string c3 = await SaveSyntheticCardAsync("張美美", "戊式電子", "行銷協理", "0988-111-222", "mm@example.com", "綠能推廣", new[] { "客戶", "新竹" });
+        // Card 1: 王小明, 甲式電子, 資深研發工程師, 0912-345-678, ming@example.com, 專長電源管理, 標籤: [客戶, 台北, 研發]
+        string c1 = await SaveSyntheticCardAsync("王小明", "甲式電子", "資深研發工程師", "0912-345-678", "ming@example.com", "專長電源管理", new[] { "客戶", "台北", "研發" });
+        // Card 2: 李大同, 乙式電腦, 產品經理, 02-2345-6789, dtlee@example.com, 筆電事業群, 標籤: [廠商, 台北]
+        string c2 = await SaveSyntheticCardAsync("李大同", "乙式電腦", "產品經理", "02-2345-6789", "dtlee@example.com", "筆電事業群", new[] { "廠商", "台北" });
+        // Card 3: 張美美, 甲式電子, 行銷協理, 0988-111-222, mm@example.com, 綠能推廣, 標籤: [客戶, 新竹]
+        string c3 = await SaveSyntheticCardAsync("張美美", "甲式電子", "行銷協理", "0988-111-222", "mm@example.com", "綠能推廣", new[] { "客戶", "新竹" });
         // Card 4: 王小華, 丙式電腦, 研發經理, 0933-444-555, hua@example.com, 主機板部門, 標籤: [廠商, 研發]
         string c4 = await SaveSyntheticCardAsync("王小華", "丙式電腦", "研發經理", "0933-444-555", "hua@example.com", "主機板部門", new[] { "廠商", "研發" });
 
@@ -76,10 +76,10 @@ public static class Issue0016AutomatedTestSuite
             return report;
         }
 
-        // SEARCH16-T01: AND 運算子 `+` (如 "王小明+台達")
-        var resAnd = await tagStore.QueryContactsAsync(new ContactQuery("王小明+台達", Array.Empty<string>()), 0, 30);
+        // SEARCH16-T01: AND 運算子 `+` (如 "王小明+甲式")
+        var resAnd = await tagStore.QueryContactsAsync(new ContactQuery("王小明+甲式", Array.Empty<string>()), 0, 30);
         bool t01Passed = resAnd.TotalCount == 1 && resAnd.Items[0].ContactId == c1;
-        Record("SEARCH16-T01", "AND 運算子「+」多條件精確交集比對 (如「王小明+台達」)", t01Passed, $"預期 1 筆 (c1)，實際回傳 {resAnd.TotalCount} 筆");
+        Record("SEARCH16-T01", "AND 運算子「+」多條件精確交集比對 (如「王小明+甲式」)", t01Passed, $"預期 1 筆 (c1)，實際回傳 {resAnd.TotalCount} 筆");
 
         // SEARCH16-T02: OR 運算子 `空格` (如 "王小明 李大同")
         var resOr = await tagStore.QueryContactsAsync(new ContactQuery("王小明 李大同", Array.Empty<string>()), 0, 30);
@@ -87,16 +87,16 @@ public static class Issue0016AutomatedTestSuite
         bool t02Passed = resOr.TotalCount == 2 && orIds.Contains(c1) && orIds.Contains(c2);
         Record("SEARCH16-T02", "OR 運算子「空格」多條件聯集比對 (如「王小明 李大同」)", t02Passed, $"預期 2 筆 (c1, c2)，實際回傳 {resOr.TotalCount} 筆");
 
-        // SEARCH16-T03: 多詞連續 AND (如 "王小明+台達+電源管理")
-        var resMultiAnd = await tagStore.QueryContactsAsync(new ContactQuery("王小明+台達+電源管理", Array.Empty<string>()), 0, 30);
+        // SEARCH16-T03: 多詞連續 AND (如 "王小明+甲式+電源管理")
+        var resMultiAnd = await tagStore.QueryContactsAsync(new ContactQuery("王小明+甲式+電源管理", Array.Empty<string>()), 0, 30);
         bool t03Passed = resMultiAnd.TotalCount == 1 && resMultiAnd.Items[0].ContactId == c1;
-        Record("SEARCH16-T03", "多詞連續 AND 複合比對 (如「王小明+台達+電源管理」)", t03Passed, $"預期 1 筆 (c1)，實際回傳 {resMultiAnd.TotalCount} 筆");
+        Record("SEARCH16-T03", "多詞連續 AND 複合比對 (如「王小明+甲式+電源管理」)", t03Passed, $"預期 1 筆 (c1)，實際回傳 {resMultiAnd.TotalCount} 筆");
 
-        // SEARCH16-T04: 混合語法 (如 "王小明+台達 李大同")
-        var resMixed = await tagStore.QueryContactsAsync(new ContactQuery("王小明+台達 李大同", Array.Empty<string>()), 0, 30);
+        // SEARCH16-T04: 混合語法 (如 "王小明+甲式 李大同")
+        var resMixed = await tagStore.QueryContactsAsync(new ContactQuery("王小明+甲式 李大同", Array.Empty<string>()), 0, 30);
         var mixIds = resMixed.Items.Select(i => i.ContactId).ToHashSet();
         bool t04Passed = resMixed.TotalCount == 2 && mixIds.Contains(c1) && mixIds.Contains(c2);
-        Record("SEARCH16-T04", "混合 AND/OR 語法分組查詢 (如「王小明+台達 李大同」)", t04Passed, $"預期 2 筆 (c1, c2)，實際回傳 {resMixed.TotalCount} 筆");
+        Record("SEARCH16-T04", "混合 AND/OR 語法分組查詢 (如「王小明+甲式 李大同」)", t04Passed, $"預期 2 筆 (c1, c2)，實際回傳 {resMixed.TotalCount} 筆");
 
         // SEARCH16-T05: 特殊字元與 SQL 注入防護
         var resInjection = await tagStore.QueryContactsAsync(new ContactQuery("'+OR+'1'='1", Array.Empty<string>()), 0, 30);
@@ -104,14 +104,14 @@ public static class Issue0016AutomatedTestSuite
         bool t05Passed = resInjection.TotalCount == 0 && resWildcard.TotalCount == 0;
         Record("SEARCH16-T05", "特殊字元跳脫與 SQL 注入防護 ('+OR+'1'='1 與 % 通配符)", t05Passed, $"注入查詢回傳 {resInjection.TotalCount} 筆，未跳脫通配符回傳 {resWildcard.TotalCount} 筆");
 
-        // SEARCH16-T06: 標籤名稱複合比對 (如 "客戶+台達", "研發+華碩")
-        var resTagMatch1 = await tagStore.QueryContactsAsync(new ContactQuery("客戶+台達", Array.Empty<string>()), 0, 30);
+        // SEARCH16-T06: 標籤名稱複合比對 (如 "客戶+甲式", "研發+丙式")
+        var resTagMatch1 = await tagStore.QueryContactsAsync(new ContactQuery("客戶+甲式", Array.Empty<string>()), 0, 30);
         var tagIds1 = resTagMatch1.Items.Select(i => i.ContactId).ToHashSet();
         bool t06Passed1 = resTagMatch1.TotalCount == 2 && tagIds1.Contains(c1) && tagIds1.Contains(c3);
 
-        var resTagMatch2 = await tagStore.QueryContactsAsync(new ContactQuery("研發+華碩", Array.Empty<string>()), 0, 30);
+        var resTagMatch2 = await tagStore.QueryContactsAsync(new ContactQuery("研發+丙式", Array.Empty<string>()), 0, 30);
         bool t06Passed2 = resTagMatch2.TotalCount == 1 && resTagMatch2.Items[0].ContactId == c4;
-        Record("SEARCH16-T06", "欄位值與分類標籤跨表複合搜尋 (如「客戶+台達」「研發+華碩」)", t06Passed1 && t06Passed2, $"客戶+台達: {resTagMatch1.TotalCount} 筆, 研發+華碩: {resTagMatch2.TotalCount} 筆");
+        Record("SEARCH16-T06", "欄位值與分類標籤跨表複合搜尋 (如「客戶+甲式」「研發+丙式」)", t06Passed1 && t06Passed2, $"客戶+甲式: {resTagMatch1.TotalCount} 筆, 研發+丙式: {resTagMatch2.TotalCount} 筆");
 
         // RELOAD16-T01: 全欄位與圖片載回主畫面
         var detail1 = await storage.GetContactDetailAsync(c1);
@@ -123,7 +123,7 @@ public static class Issue0016AutomatedTestSuite
         bool t07Passed = testVm.CurrentContactId == c1 &&
                          testVm.CurrentRevision == detail1.Revision &&
                          testVm.NameRow.Value == "王小明" &&
-                         testVm.CompanyRow.Value == "戊式電子" &&
+                         testVm.CompanyRow.Value == "甲式電子" &&
                          testVm.TitleRow.Value == "資深研發工程師" &&
                          testVm.PhoneRows.Count == 1 && testVm.PhoneRows[0].Value == "0912-345-678" &&
                          testVm.EmailRows.Count == 1 && testVm.EmailRows[0].Value == "ming@example.com" &&

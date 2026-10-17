@@ -524,7 +524,7 @@ public static class Issue0008AutomatedTestSuite
         mockOcr.Tcs.TrySetResult(new OcrResult
         {
             Success = true,
-            Candidates = new List<OcrCandidateItem> { new() { Id = 2, Text = "乙式科技技", OriginalText = "乙式科技技" } }
+            Candidates = new List<OcrCandidateItem> { new() { Id = 2, Text = "乙式科技", OriginalText = "乙式科技" } }
         });
         await ocrTask2;
         bool manualEditSafe = vmMock.CompanyRow.Value == "甲式科技研發部";

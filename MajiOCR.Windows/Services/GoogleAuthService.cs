@@ -117,7 +117,12 @@ public class GoogleAuthService : IGoogleAuthService
         try
         {
             string path = GetConfigFilePath();
-            var data = new { ClientId = clientId?.Trim(), ClientSecret = clientSecret?.Trim() };
+            string? trimmedId = clientId?.Trim();
+            string? trimmedSecret = clientSecret?.Trim();
+            string? protectedSecret = string.IsNullOrEmpty(trimmedSecret)
+                ? trimmedSecret
+                : CredentialProtectionHelper.Protect(trimmedSecret);
+            var data = new { ClientId = trimmedId, ClientSecret = protectedSecret };
             string json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(path, json, Encoding.UTF8);
         }
@@ -134,8 +139,15 @@ public class GoogleAuthService : IGoogleAuthService
                 string json = await File.ReadAllTextAsync(path, Encoding.UTF8);
                 var node = JsonNode.Parse(json);
                 string? clientId = node?["ClientId"]?.GetValue<string>();
-                string? clientSecret = node?["ClientSecret"]?.GetValue<string>();
-                return (clientId, clientSecret);
+                string? rawSecret = node?["ClientSecret"]?.GetValue<string>();
+                var (plainSecret, wasLegacyPlainText, _) = CredentialProtectionHelper.UnprotectWithMetadata(rawSecret);
+
+                if (wasLegacyPlainText && !string.IsNullOrWhiteSpace(plainSecret))
+                {
+                    await SaveOAuthConfigAsync(clientId ?? string.Empty, plainSecret);
+                }
+
+                return (clientId, plainSecret);
             }
         }
         catch { }

@@ -100,7 +100,7 @@ public static class Issue0020AutomatedTestSuite
 
         // TAG20-T03: 建立標籤並保存名片後，標籤更名與主頁面分類標籤 RefreshClassificationAsync 即時同步
         await tagStore.CreateTagAsync("供應商A");
-        string contactId = await SaveSyntheticCardAsync("林協理", "壬式科技", new[] { "供應商A" });
+        string contactId = await SaveSyntheticCardAsync("林協理", "甲式科技", new[] { "供應商A" });
         var detail = await storage.GetContactDetailAsync(contactId);
         var tagDef = detail?.Tags.FirstOrDefault(t => t.DisplayName == "供應商A");
         bool t03_hasTag = tagDef != null;
@@ -134,7 +134,7 @@ public static class Issue0020AutomatedTestSuite
         Record("TAG20-T05", "TagCatalogPanel (>=650/920) 與 TagPickerPanel (>=620/760) 尺寸約束驗證", t05Passed, $"CatalogOk={t05_catalog}, PickerOk={t05_picker}");
 
         // TAG20-T06: 完整名片儲存與查詢標籤持久化驗證
-        string c1 = await SaveSyntheticCardAsync("陳總裁", "庚式控股", new[] { "金控主管", "VIP客戶" });
+        string c1 = await SaveSyntheticCardAsync("陳總裁", "乙式金控", new[] { "金控主管", "VIP客戶" });
         var qResult = await storage.QueryContactsAsync(new ContactQuery(null, Array.Empty<string>()), 0);
         var targetCard = qResult.Items.FirstOrDefault(c => c.ContactId == c1);
         bool t06Passed = targetCard != null && targetCard.Tags.Count == 2 &&

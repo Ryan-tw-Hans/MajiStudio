@@ -1,24 +1,21 @@
-# MajiOCR.Windows 0.1.0-beta.24 (支援 iOS / Web 雲端版 Vercel 一鍵部署精靈與 SQLCipher 4 跨平台解密相容驗證)
+# MajiOCR.Windows 0.1.0-beta.30 (強化本機憑證 Windows DPAPI 加密保護與清理公開儲存庫敏感資訊)
 
-目前為本機發布版，更新日期為 2026-10-16（Asia/Taipei）。
-直接執行本資料夾的 `MajiOCR.Windows.exe`。維持單一免安裝、自含執行檔（Self-Contained Single-File Executable）及離線 OCR 模型，並內嵌完整 `MajiOCR.Web` (`0.1.0-beta.1`) 靜態 PWA 資產包。
+目前為本機發布版，更新日期為 2026-10-17（Asia/Taipei）。
+直接執行本資料夾的 `MajiOCR.Windows.exe`。維持單一免安裝、自含執行檔（Self-Contained Single-File Executable）及離線 OCR 模型，並內嵌完整 `MajiOCR.Web` (`0.2.0-beta.1`) 靜態 PWA 資產包。
 
-### 本版更新重點
-1. **新增「📱 部署 iOS / Web 雲端版 (Vercel)...」一鍵部署精靈 (`VercelDeployDialog` & `VercelDeploymentService`)**：
-   - 於主畫面右上角更多功能選單（`...`）與「已存名片」管理面板頂部新增部署入口。
-   - 提供三步驟互動引導：一鍵開啟瀏覽器前往 Vercel 免費註冊／登入並建立 Access Token、自動驗證帳號並透過 Vercel REST API (`POST /v13/deployments`) 直推內嵌之 10 項 `MajiOCR.Web` 靜態 PWA 檔案、自動解除 Vercel SSO 存取牆 (`PATCH /v9/projects/{id}`)，並即時產生本機 QR Code 供 iPhone X (iOS 16+) Safari 掃描與「加入主畫面」。
-   - 嚴格保障隱私安全：僅上傳 `MajiOCR.Web` 純靜態前端程式碼，本機 `contacts.sqlite3` 與名片圖片絕不隨部署上傳至 Vercel。
-2. **跨平台 SQLCipher 4 (`SQLCipher-AES256`) 分頁解密器與驗證套件 (`SqlCipher4Decryptor`)**：
-   - 實作與 iOS PWA WebCrypto 完全對等之 SQLCipher 4 頁面解密與 HMAC-SHA512 驗證器（4096-byte page、80-byte reserve、PBKDF2-HMAC-SHA512 256,000 次迭代）。
-   - 新增 `--test-issue-0044` 自動化驗證套件（T1~T6 全數通過）。
-3. **版本號與更新紀錄（Change Log）顯示強化**：
-   - 主視窗標題列新增顯示目前軟體版本號 `MajiOCR.Windows 0.1.0-beta.24 (v0.1.0.24)`。
-   - 「關於 MajiOCR.Windows」對話框改為動態讀取最新軟體版本號並內建可捲動的完整更新紀錄（`CHANGELOG.txt`）。
-   - 「檢查軟體更新」對話框預設展開「📋 更新內容與變更紀錄 (Change Log)」，並修正 `UpdateService.LoadLocalChangeLogText()` 優先讀取內嵌於單一 `.exe` 的最新 `MajiOCR.CHANGELOG.txt` 資源。
+### 本版更新重點 (`ISSUE-0050`)
+1. **本機執行時憑證 Windows DPAPI (`CryptProtectData` CurrentUser) 加密保護 (`CredentialProtectionHelper`)**：
+   - `GoogleAuthService` (`google_oauth_config.json`) 的 `ClientSecret` 與 `AppSettingsService` (`%LocalAppData%\MajiOCR.Windows\settings.json`) 的 `VercelAccessToken` 全面改以 Windows DPAPI (`dpapi:<Base64>`) 加密落盤，磁碟不再保存明文秘密，防止整個可攜式資料夾複製或分享時外洩憑證。
+   - 支援既有明文設定檔（含 UTF-8 BOM 相容）首次載入時自動平滑升級為 DPAPI 密文；跨電腦或損毀密文無法解密時安全回退為空值並提示重新設定，絕不引發崩潰。
+2. **儲存庫公開敏感資訊與環境資訊全面清理**：
+   - 移除 `Issue0035AutomatedTestSuite.cs` 寫死的個人工作階段路徑與真實姓名，並將測試套件中的企業信箱網域統一替換為 RFC 2606 保留測試網域 `example.com`。
+   - `DefaultUpdateSettings.json` 與 `CHANGELOG.txt` 移除舊版個人 Google Drive 資源識別碼，預設更新來源統一指向官方 GitHub Releases API (`https://api.github.com/repos/Ryan-tw-Hans/MajiStudio/releases/latest`)。
+   - 14 份正式文件（`Architecture/`、`DesignPlans/`、`Requirements/`、`TestPlans/`、`TestReports/`）中的本機絕對路徑連結統一改為儲存庫相對路徑。
+   - 將內部 `IssueLog/IssueLog.sqlite3` 移出 Git 公開追蹤（本機完整保留），並將本機 Git 提交信箱更新為 GitHub noreply 信箱。
 
 ---
-- **FileVersion**：0.1.0.24
-- **SHA-256**：D7C870496777BC6D7611932855BCB33DCE6725C2EF318FA84856AF4F5BE5FD81
-- **檔案大小**：298,808,827 位元組 (~285.0 MB)
+- **FileVersion**：0.1.0.30 (`0.1.0-beta.30`)
+- **SHA-256**：`7ED97B913F5D5952FF6AA26399AEFEA90296500860B99ECB5D792CD646D77D6A`
+- **檔案大小**：299,877,923 位元組 (~286.0 MB)
 
-本機隔離啟動、備份/還原/加密安全測試（`ISSUE-0041` 9/9 PASS）、自訂欄位與自動更新測試（`ISSUE-0043` 5/5 PASS）及 iOS PWA / Vercel 部署與 SQLCipher 解密測試（`ISSUE-0044` 6/6 PASS）均已全數通過。
+本機單檔發布驗證與自動化測試套件（`ISSUE-0050` 5/5 PASS、`ISSUE-0046` 3/3 PASS、`ISSUE-0040` 4/4 PASS、`ISSUE-0036` 7/7 PASS、`ISSUE-0035` 5/5 PASS、`ISSUE-0022` 8/8 PASS）均已全數通過。

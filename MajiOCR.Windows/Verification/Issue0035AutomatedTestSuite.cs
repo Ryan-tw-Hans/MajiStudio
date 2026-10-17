@@ -28,18 +28,18 @@ public class Issue0035AutomatedTestSuite
         return results;
     }
 
-    public static async Task<TestResult> DiagnoseUserImageAsync(string imagePath)
+    public static async Task<TestResult> DiagnoseUserImageAsync(string? imagePath = null)
     {
-        if (!File.Exists(imagePath))
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
         {
-            return new TestResult("TC-0035-05: 使用者上傳名片診斷", true, "圖片檔案不存在於本機暫存，略過");
+            return new TestResult("TC-0035-05: 合成名片區域診斷", true, "未指定外部測試圖檔或檔案不存在，略過選用診斷");
         }
 
         var imgService = new ImageService();
         var loadRes = await imgService.LoadFromFileAsync(imagePath);
         if (!loadRes.Success || loadRes.SessionInfo == null)
         {
-            return new TestResult("TC-0035-05: 使用者上傳名片診斷", false, $"載入失敗: {loadRes.ErrorMessage}");
+            return new TestResult("TC-0035-05: 合成名片區域診斷", false, $"載入失敗: {loadRes.ErrorMessage}");
         }
 
         using var ocrService = new OcrService();
@@ -53,7 +53,7 @@ public class Issue0035AutomatedTestSuite
             sb.AppendLine($"  - [{kind}] (X={c.X}, Y={c.Y}, W={c.Width}, H={c.Height}, Conf={c.Confidence:P0}): \"{c.Text}\"");
         }
 
-            // Find candidate for name or test region around name
+        // Find candidate for synthetic name or test region around name
         var nameCand = ocrRes.Candidates.FirstOrDefault(c => c.Text.Contains("王") || c.Text.Contains("明"));
         if (nameCand != null)
         {
@@ -81,7 +81,7 @@ public class Issue0035AutomatedTestSuite
             }
         }
 
-        return new TestResult("TC-0035-05: 使用者上傳名片診斷", true, sb.ToString());
+        return new TestResult("TC-0035-05: 合成名片區域診斷", true, sb.ToString());
     }
 
     public static async Task<TestResult> Test01_NormalImageLoadAsync()

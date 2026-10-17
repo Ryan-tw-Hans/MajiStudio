@@ -1,0 +1,47 @@
+﻿{
+  "Timestamp": "2026-10-17T14:24:48.505543Z",
+  "Version": "0.1.0-beta.30",
+  "IssueId": "ISSUE-0050",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 5,
+  "PassCount": 5,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "TC-0050-01",
+      "Description": "\u9A57\u8B49 GoogleAuthService \u5132\u5B58 google_oauth_config.json \u6642\u4EE5 Windows DPAPI \u52A0\u5BC6 ClientSecret \u4E14\u4E0D\u542B\u660E\u6587",
+      "Passed": true,
+      "Details": "DiskCipherPrefix=dpapi:AQAAANCM..., PlaintextAbsentOnDisk=true, RoundtripMatch=true",
+      "LatencyMs": 147
+    },
+    {
+      "TestId": "TC-0050-02",
+      "Description": "\u9A57\u8B49 AppSettingsService \u5132\u5B58 settings.json \u6642\u4EE5 Windows DPAPI \u52A0\u5BC6 VercelAccessToken \u4E14\u4E0D\u542B\u660E\u6587",
+      "Passed": true,
+      "Details": "DiskCipherPrefix=dpapi:AQAAANCM..., PlaintextAbsentOnDisk=true, RoundtripMatch=true",
+      "LatencyMs": 83
+    },
+    {
+      "TestId": "TC-0050-03",
+      "Description": "\u9A57\u8B49\u820A\u7248\u660E\u6587\u8A2D\u5B9A\u6A94\u8B80\u53D6\u5F8C\u81EA\u52D5\u5E73\u6ED1\u5347\u7D1A\u70BA DPAPI \u5BC6\u6587\uFF0C\u4E14\u640D\u6BC0\u5BC6\u6587\u5B89\u5168\u56DE\u9000\u4E0D\u5D29\u6F70",
+      "Passed": true,
+      "Details": "LegacyAutoUpgraded=true, CorruptedSafeFallbackToNull=true",
+      "LatencyMs": 32
+    },
+    {
+      "TestId": "TC-0050-04",
+      "Description": "\u9A57\u8B49\u5132\u5B58\u5EAB\u654F\u611F\u8CC7\u8A0A\u5075\u6E2C\u5668\uFF08\u5408\u6210\u8F38\u5165\u9A57\u8B49\uFF09\u53CA Issue0035\u3001DefaultUpdateSettings.json\u3001CHANGELOG.txt \u7121\u500B\u4EBA\u8DEF\u5F91\u8207\u820A\u7248\u96F2\u7AEF\u786C\u789F\u9023\u7D50",
+      "Passed": true,
+      "Details": "SyntheticDetectorVerified=true, Issue0035Clean=true, DefaultUpdateSettingsClean=true, ChangelogClean=true",
+      "LatencyMs": 21
+    },
+    {
+      "TestId": "TC-0050-05",
+      "Description": "\u9A57\u8B49 .gitignore \u6392\u9664 IssueLog.sqlite3\u3001\u6B63\u5F0F\u6587\u4EF6\u7121\u672C\u6A5F\u7D55\u5C0D\u8DEF\u5F91\u9023\u7D50\u4E14\u7248\u672C\u540C\u6B65\u70BA 0.1.0.30",
+      "Passed": true,
+      "Details": "GitignoreClean=true, DocRelativeLinksVerified=true, Version=0.1.0.30",
+      "LatencyMs": 364
+    }
+  ]
+}

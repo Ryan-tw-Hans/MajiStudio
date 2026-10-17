@@ -92,7 +92,7 @@ public class Issue0026AutomatedTestSuite
         {
             ContactId = "C-AUTH-01",
             Name = "王小明",
-            Company = "宏碁科技",
+            Company = "範例科技",
             CreatedAt = DateTimeOffset.UtcNow
         };
         contact.Values.Add(new ContactValueRecord { ValueKind = CanonicalValueKind.Name, RawValue = "王小明", Label = "姓名" });

@@ -80,9 +80,9 @@ public static class Issue0017AutomatedTestSuite
         Record("TAG17-T02", "TagDisplayItem 清單資料封裝與使用張數膠囊徽章格式", t02Passed, $"Badge: {displayItem.UsageBadge}, DisplayLine: {displayItem.DisplayLine}");
 
         // Setup cards using tags
-        string c1 = await SaveSyntheticCardAsync("王大明", "癸式電子", new[] { "商務客戶", "台北地區" });
+        string c1 = await SaveSyntheticCardAsync("王大明", "甲式科技", new[] { "商務客戶", "台北地區" });
         string c2 = await SaveSyntheticCardAsync("李小華", "乙式科技", new[] { "商務客戶" });
-        string c3 = await SaveSyntheticCardAsync("陳建國", "甲式科技", new[] { "台北地區" });
+        string c3 = await SaveSyntheticCardAsync("陳建國", "丙式科技", new[] { "台北地區" });
 
         // TAG17-T03: 標籤清單分頁與使用計數查詢 (GetTagsAsync)
         var tagsPage = await tagStore.GetTagsAsync("", 0);

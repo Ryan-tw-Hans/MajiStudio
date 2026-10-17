@@ -58,22 +58,22 @@ public static class Issue0015AutomatedTestSuite
         }
 
         // T01: Multi-field query returns Name, Company, Title, Phone, Email, RelativeImagePath
-        string cardId1 = await SaveSyntheticCardAsync("王小明", "丁式電腦", "專案經理", "0912-345-678", "ming@example.com", new[] { "客戶", "台北" });
-        string cardId2 = await SaveSyntheticCardAsync("李大同", "大同資訊", "技術總監", "02-2345-6789", "dtlee@example.com", new[] { "廠商" });
-        string cardId3 = await SaveSyntheticCardAsync("張美美", "己式控股", "理財顧問", "0988-111-222", "mm@example.com", new[] { "客戶" });
+        string cardId1 = await SaveSyntheticCardAsync("王小明", "甲式電腦", "專案經理", "0912-345-678", "ming@example.com", new[] { "客戶", "台北" });
+        string cardId2 = await SaveSyntheticCardAsync("李大同", "乙式資訊", "技術總監", "02-2345-6789", "dtlee@example.com", new[] { "廠商" });
+        string cardId3 = await SaveSyntheticCardAsync("張美美", "丙式金控", "理財顧問", "0988-111-222", "mm@example.com", new[] { "客戶" });
 
         var pagedAll = await storage.GetContactsPagedAsync(null, 0, 30);
         var item1 = pagedAll.Items.FirstOrDefault(i => i.ContactId == cardId1);
         Record("TABLE15-T01", "表格多欄位查詢回傳姓名、公司、職稱、電話、Email及圖片狀態",
             item1 != null &&
             item1.Name == "王小明" &&
-            item1.Company == "丁式電腦" &&
+            item1.Company == "甲式電腦" &&
             item1.Title == "專案經理" &&
             item1.Phone == "0912-345-678" &&
             item1.Email == "ming@example.com" &&
             item1.HasImage &&
             item1.DisplayTitle == "王小明" &&
-            item1.DisplaySubtitle == "丁式電腦");
+            item1.DisplaySubtitle == "甲式電腦");
 
         // T02: Name Sort Ascending and Descending
         if (storage is ITagStorageService tagStorage)
@@ -130,7 +130,7 @@ public static class Issue0015AutomatedTestSuite
             Record("TABLE15-T06", "搜尋關鍵字、標籤與排序複合查詢",
                 searchCustomerSorted.TotalCount == 1 &&
                 searchCustomerSorted.Items[0].Name == "張美美" &&
-                searchCustomerSorted.Items[0].Company == "己式控股");
+                searchCustomerSorted.Items[0].Company == "丙式金控");
         }
         else
         {

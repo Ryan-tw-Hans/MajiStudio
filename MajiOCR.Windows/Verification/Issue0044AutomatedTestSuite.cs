@@ -361,7 +361,7 @@ public static class Issue0044AutomatedTestSuite
             {
                 var sw = Stopwatch.StartNew();
                 string url = "https://majiocr-ios-pwa.vercel.app";
-                string longVercelUrl = "https://majiocr-pwa-demo.example.com";
+                string longVercelUrl = "https://majiocr-ios-pwa-demo-projects-1234abcd.vercel.app";
                 bool[,] matrix = QrCodeBmpGenerator.GenerateMatrix(url);
                 bool decodedOk1 = QrCodeBmpGenerator.TryVerifyAndDecodeMatrix(matrix, out string decodedUrl1, out string qrErr1);
                 bool[,] matrix2 = QrCodeBmpGenerator.GenerateMatrix(longVercelUrl);

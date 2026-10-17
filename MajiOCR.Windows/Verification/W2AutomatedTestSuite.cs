@@ -88,11 +88,11 @@ public static class W2AutomatedTestSuite
         bool sPhone1 = FieldSuggester.Suggest("0912-345-678") == CanonicalValueKind.Phone;
         bool sPhone2 = FieldSuggester.Suggest("+886-920-111-222") == CanonicalValueKind.Phone;
         bool sPhone3 = FieldSuggester.Suggest("(02) 2345-6789") == CanonicalValueKind.Phone;
-        bool sAddr1 = FieldSuggester.Suggest("台北市示範區測試路一段100號") == CanonicalValueKind.Address;
-        bool sAddr2 = FieldSuggester.Suggest("地址: 新北市板橋區縣民大道二段100號10樓") == CanonicalValueKind.Address;
+        bool sAddr1 = FieldSuggester.Suggest("台北市示範區範例路五段7號") == CanonicalValueKind.Address;
+        bool sAddr2 = FieldSuggester.Suggest("地址: 新北市示範區範例大道二段100號10樓") == CanonicalValueKind.Address;
         bool sNote1 = FieldSuggester.Suggest("統編: 12345678") == CanonicalValueKind.Note;
         bool sNote2 = FieldSuggester.Suggest("統一編號：87654321") == CanonicalValueKind.Note;
-        bool sComp1 = FieldSuggester.Suggest("台灣積體電路製造股份有限公司") == CanonicalValueKind.Company;
+        bool sComp1 = FieldSuggester.Suggest("台灣範例科技製造股份有限公司") == CanonicalValueKind.Company;
         bool sComp2 = FieldSuggester.Suggest("創意數位工作室") == CanonicalValueKind.Company;
         bool sTitle = FieldSuggester.Suggest("職稱: 資深軟體架構師") == CanonicalValueKind.Title;
         bool sName = FieldSuggester.Suggest("姓名: 陳小美") == CanonicalValueKind.Name;

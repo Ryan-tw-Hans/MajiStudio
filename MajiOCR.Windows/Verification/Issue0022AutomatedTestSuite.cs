@@ -82,7 +82,7 @@ public class Issue0022AutomatedTestSuite
             "資深架構師",
             "0912-345-678",
             "ming@example.com",
-            "新竹科學園區研新一路1號",
+            "測試科學園區研新一路1號",
             "https://www.example.com",
             "重要客戶 \"VIP\"",
             "半導體", "VIP");
@@ -177,13 +177,13 @@ public class Issue0022AutomatedTestSuite
     public static TestResult Test06_GoogleSync_PersonJsonPayload()
     {
         var syncService = new GoogleContactsSyncService();
-        var contact = CreateSampleContact("C6", "陳大同", "辛式公司", "技術長", "0933-444-555", "tatung@example.com", "台北市中山北路三段", "https://example.com", "家電專家", "百年企業");
+        var contact = CreateSampleContact("C6", "陳大同", "丁式公司", "技術長", "0933-444-555", "tatung@example.com", "台北市示範區範例北路三段", "https://example.com", "家電專家", "百年企業");
 
         string json = syncService.BuildGooglePersonJson(contact);
         var node = JsonNode.Parse(json);
 
         bool hasNames = node?["names"]?[0]?["displayName"]?.GetValue<string>() == "陳大同";
-        bool hasOrg = node?["organizations"]?[0]?["name"]?.GetValue<string>() == "辛式公司";
+        bool hasOrg = node?["organizations"]?[0]?["name"]?.GetValue<string>() == "丁式公司";
         bool hasPhone = node?["phoneNumbers"]?[0]?["value"]?.GetValue<string>() == "0933-444-555";
         bool hasEmail = node?["emailAddresses"]?[0]?["value"]?.GetValue<string>() == "tatung@example.com";
         bool hasUserDefined = node?["userDefined"]?[0]?["value"]?.GetValue<string>() == "百年企業";

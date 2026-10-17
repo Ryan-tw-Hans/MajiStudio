@@ -35,10 +35,10 @@
 | :--- | :--- | :--- | :--- | :---: |
 | **T1.1** | 產出之 SQLite 二進位檔案檢查 | 為 Uint8Array 且大小為 4096 之倍數 | 81,920 bytes，長度符合 | **PASS** |
 | **T1.2** | SQLite 標頭驗證 | 前 16 bytes 為 `SQLite format 3\0` | 標頭完全吻合 | **PASS** |
-| **T1.3** | 聯絡人資料寫入解析驗證 | 正確寫入 `contact_records` 與 `contact_field_values` | 成功解析出 1 筆聯絡人「王小明」，公司、電話、標籤皆正確 | **PASS** |
+| **T1.3** | 聯絡人資料寫入解析驗證 | 正確寫入 `contact_records` 與 `contact_field_values` | 成功解析出 1 筆聯絡人「林曉峰」，公司、電話、標籤皆正確 | **PASS** |
 | **T2.1** | SQLCipher 逐頁加密標頭 | 加密後標頭不得為明文 SQLite | 標頭已完全隨機化加密 | **PASS** |
 | **T2.2** | SQLCipher 檔案大小保持 | 加密後大小與原資料庫大小相同 | 81,920 bytes，完全相同 | **PASS** |
-| **T2.3** | WebCrypto 反向解密驗證 | 以正確主密碼解密，資料 100% 還原 | 成功還原明文 SQLite，解析出聯絡人「王小明」無損 | **PASS** |
+| **T2.3** | WebCrypto 反向解密驗證 | 以正確主密碼解密，資料 100% 還原 | 成功還原明文 SQLite，解析出聯絡人「林曉峰」無損 | **PASS** |
 | **T2.4** | 錯誤密碼防護攔截 | 輸入錯誤密碼拋出 `INVALID_PASSWORD` | 成功捕捉錯誤密碼例外，未外洩或損毀資料 | **PASS** |
 | **T3.1** | ZIP 檔案打包驗證 | 輸出有效 ZIP 二進位（PK 標誌） | 86,608 bytes，包含標準 PK 標誌 | **PASS** |
 | **T3.2** | ZIP 解壓縮完整性檢查 | 包含 `manifest.json`、`contacts.sqlite3` 與圖檔 | 解壓縮成功，圖檔與資料庫完整無缺 | **PASS** |

@@ -53,7 +53,12 @@ public sealed class UpdateService
     public UpdateSettings LoadSettings()
     {
         var settings = LoadSettingsFile(DefaultSettingsFilePath, "內建更新設定")
-            ?? new UpdateSettings(null, null, false);
+            ?? new UpdateSettings(DefaultReleaseManifestUrl, null, false);
+        if (string.IsNullOrWhiteSpace(settings.ReleaseManifestUrl) ||
+            settings.ReleaseManifestUrl.Contains("drive.google.com", StringComparison.OrdinalIgnoreCase))
+        {
+            settings = settings with { ReleaseManifestUrl = DefaultReleaseManifestUrl };
+        }
         var userSettings = LoadSettingsFile(SettingsFilePath, "使用者更新設定");
         if (userSettings is not null)
         {

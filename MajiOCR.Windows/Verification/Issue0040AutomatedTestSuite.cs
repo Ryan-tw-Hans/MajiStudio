@@ -81,8 +81,10 @@ public static class Issue0040AutomatedTestSuite
             {
                 string rawJson = await File.ReadAllTextAsync(configPath);
                 var jsonNode = JsonNode.Parse(rawJson);
+                string? diskSecret = jsonNode?["ClientSecret"]?.GetValue<string>();
                 tc01JsonValid = jsonNode?["ClientId"]?.GetValue<string>() == testClientId &&
-                                jsonNode?["ClientSecret"]?.GetValue<string>() == testClientSecret;
+                                CredentialProtectionHelper.IsProtected(diskSecret) &&
+                                CredentialProtectionHelper.Unprotect(diskSecret) == testClientSecret;
             }
 
             bool tc01Passed = loadedId == testClientId && loadedSecret == testClientSecret && tc01JsonValid;

@@ -1,5 +1,9 @@
 # MajiOCR.Windows 變更紀錄
 
+## [0.1.0.30] - 2026-10-17
+- 強化本機執行時憑證安全：Google OAuth ClientSecret (`google_oauth_config.json`) 與 Vercel Access Token (`settings.json`) 全面改採 Windows DPAPI (`CryptProtectData` CurrentUser) 加密儲存，並支援既有明文設定自動平滑升級 (ISSUE-0050)
+- 清理公開儲存庫敏感與環境資訊：移除診斷測試中的本機絕對路徑、測試姓名與舊版 Google Drive 資源識別碼，將規格文件連結統一改為相對路徑，並將內部 `IssueLog.sqlite3` 移出 Git 公開追蹤
+
 ## [0.1.0.29] - 2026-10-17
 - iOS PWA (MajiOCR.Web v0.2.0-beta.1) 升級支援名片資料編輯、新增名片與照片拍攝/選取 (ISSUE-0049)
 - 內建瀏覽器端 WebAssembly SQLite 引擎 (sql.js) 與 Pure-JS ZIP 打包器，支援將修改後的名片資料庫與圖檔直接打包為標準 MajiOCR_Backup_iOS_*.zip
@@ -46,11 +50,11 @@
 ## [0.1.0.22] - 2026-09-30
 - 主頁面頂部選項排版重構：精簡核心功能按鈕並固定顯示文字標籤，新增獨立 Fluent 卡片式辨識語系與畫面控制列
 - 選單項目完整整合：新增備份（本機 ZIP 封裝/雲端）、還原（本機 ZIP/雲端）以及三種格式聯絡人匯出（Outlook CSV、Google Contacts CSV、通用 vCard）與雲端同步
-- 整合 Google Drive 軟體自動更新機制 (ISSUE-0042)
+- 整合軟體自動更新機制 (ISSUE-0042)
 - 主畫面工具列新增「🔄 檢查軟體更新」按鈕與更新管理對話框 (WinUI 3 ContentDialog)
 - 支援背景下載、SHA-256 完整性雜湊校驗與獨立 updater 套用重啟
 - 套用更新時嚴格排除並保護使用者的 SQLite 資料庫（contacts.sqlite3）、設定檔與名片圖片
-- 支援透過 publish-targets.json 與發布選單發布至指定 Google Drive 帳號
+- 支援透過 publish-targets.json 與發布選單發布至指定雲端更新目錄
 
 ## [0.1.0.21] - 2026-09-30
 - 修復主程式目錄 ACL 權限相容性與還原防護 (ISSUE-0041)

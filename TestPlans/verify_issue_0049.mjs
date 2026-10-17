@@ -69,13 +69,13 @@ async function runTests() {
       jobTitle: '產品總監',
       department: '研發中心',
       taxId: '12345678',
-      notes: '潛在跨平台企業客戶',
+      notes: '跨平台測試範例聯絡人',
       phones: [
         { kind: 'MobilePhone', label: '手機', value: '0912-345-678' },
         { kind: 'Phone', label: '電話', value: '02-2345-6789' }
       ],
       emails: [{ label: 'Email', value: 'ming@example.com' }],
-      addresses: [{ label: '地址', value: '台北市示範區測試路一段100號' }],
+      addresses: [{ label: '地址', value: '測試市示範區範例路一段1號' }],
       websites: [{ label: '網站', value: 'https://example.com' }],
       customFields: [{ label: '統編', value: '12345678' }],
       tags: [{ tagId: 'tag-vip', displayName: 'VIP 客戶' }],
@@ -240,7 +240,7 @@ async function runTests() {
   assert(vcfText.includes('ORG;CHARSET=UTF-8:範例科技股份有限公司'), 'vCard 應包含公司 ORG');
   assert(vcfText.includes('TEL;TYPE=CELL,VOICE:0912-345-678'), 'vCard 應包含電話 TEL');
   assert(vcfText.includes('EMAIL;TYPE=INTERNET,WORK:ming@example.com'), 'vCard 應包含 Email');
-  assert(vcfText.includes('ADR;TYPE=WORK;CHARSET=UTF-8:;;台北市示範區測試路一段100號;;;;'), 'vCard 應包含地址 ADR');
+  assert(vcfText.includes('ADR;TYPE=WORK;CHARSET=UTF-8:;;測試市示範區範例路一段1號;;;;'), 'vCard 應包含地址 ADR');
   assert(vcfText.endsWith('END:VCARD'), 'vCard 應以 END:VCARD 結尾');
 
   console.log('✅ [T4] PASS\n');
