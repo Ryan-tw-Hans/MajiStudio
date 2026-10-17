@@ -296,7 +296,7 @@ public sealed class SavedCardsTablePanel : UserControl
 
         exportFlyout.Items.Add(new MenuFlyoutSeparator());
 
-        var deployVercelItem = new MenuFlyoutItem { Text = "📱 部署 iOS / Web 雲端版 (Vercel)..." };
+        var deployVercelItem = new MenuFlyoutItem { Text = "📱 iOS / Web 行動版 (GitHub Pages / Vercel)..." };
         deployVercelItem.Click += async (s, e) =>
         {
             if (this.XamlRoot != null)

@@ -15,6 +15,7 @@ public interface IAppSettingsService
     void UpdatePartialOcrLanguage(string code);
     void UpdateSecuritySettings(bool isPasswordProtected, string? passwordHash, string? passwordSalt);
     void UpdateVercelSettings(string? accessToken, string? projectName, string? webGoogleClientId, string? lastDeployedUrl = null);
+    void UpdateGitHubPagesUrl(string? url);
 }
 
 /// <summary>
@@ -181,6 +182,18 @@ public class AppSettingsService : IAppSettingsService
             {
                 current.LastDeployedVercelUrl = lastDeployedUrl.Trim();
             }
+            SaveSettings(current);
+        }
+    }
+
+    public void UpdateGitHubPagesUrl(string? url)
+    {
+        lock (_lock)
+        {
+            var current = LoadSettings();
+            current.GitHubPagesUrl = string.IsNullOrWhiteSpace(url)
+                ? "https://ryan-tw-hans.github.io/MajiStudio/"
+                : url.Trim();
             SaveSettings(current);
         }
     }

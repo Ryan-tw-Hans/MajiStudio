@@ -42,6 +42,9 @@ public class AppSettings
     [JsonPropertyName("lastDeployedVercelUrl")]
     public string? LastDeployedVercelUrl { get; set; }
 
+    [JsonPropertyName("gitHubPagesUrl")]
+    public string GitHubPagesUrl { get; set; } = "https://ryan-tw-hans.github.io/MajiStudio/";
+
     [JsonPropertyName("lastUpdatedAt")]
     public string LastUpdatedAt { get; set; } = string.Empty;
 }

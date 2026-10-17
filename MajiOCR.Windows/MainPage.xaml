@@ -38,7 +38,7 @@
             <CommandBar.SecondaryCommands>
                 <AppBarButton Icon="SaveLocal" Label="備份名片資料 (本機/雲端)..." Click="OnBackupClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="Download" Label="還原名片資料 (本機/雲端)..." Click="OnRestoreClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton x:Name="DeployVercelMenuButton" Icon="Globe" Label="部署 iOS / Web 雲端版 (Vercel)..." Click="OnDeployVercelClicked" />
+                <AppBarButton x:Name="DeployVercelMenuButton" Icon="Globe" Label="📱 iOS / Web 行動版 (GitHub Pages / Vercel)..." Click="OnDeployVercelClicked" />
                 <AppBarSeparator />
                 <AppBarButton Icon="OpenFile" Label="匯出至 Outlook CSV (*.csv)" Click="OnExportOutlookClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="OpenFile" Label="匯出至 Google 聯絡人 (*.csv)" Click="OnExportGoogleClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
