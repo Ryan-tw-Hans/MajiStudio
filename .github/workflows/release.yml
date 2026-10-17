@@ -64,13 +64,26 @@ jobs:
           }
           Write-Output "tag=$tag" >> $env:GITHUB_OUTPUT
 
+      - name: Extract Release Notes from CHANGELOG.txt
+        id: extract_notes
+        shell: powershell
+        run: |
+          $changelog = Get-Content CHANGELOG.txt -Raw -Encoding UTF8
+          if ($changelog -match "(?s)(## \[[0-9\.]+\][^\r\n]*\r?\n.*?\r?\n)(?=## \[|$)") {
+            $notes = $matches[1].Trim()
+          } else {
+            $notes = "MajiOCR.Windows Release"
+          }
+          [System.IO.File]::WriteAllText("release_notes.md", $notes, [System.Text.Encoding]::UTF8)
+          Get-Content release_notes.md
+
       - name: Create or Update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_tag.outputs.tag }}
           name: MajiOCR.Windows ${{ steps.get_tag.outputs.tag }}
           files: MajiOCR.Windows.zip
-          generate_release_notes: true
+          body_path: release_notes.md
           draft: false
           prerelease: false
         env:
