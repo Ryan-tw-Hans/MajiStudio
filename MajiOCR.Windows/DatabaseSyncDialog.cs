@@ -72,7 +72,12 @@ public class DatabaseSyncDialog
             DefaultButton = ContentDialogButton.Primary
         };
 
-        var rootStack = new StackPanel { Spacing = 14, Width = 640 };
+        // 解除 WinUI 3 ContentDialog 預設 548px 寬度上限，避免右側內容與按鈕被裁切跑版
+        dialog.Resources["ContentDialogMaxWidth"] = 840.0;
+        dialog.Resources["ContentDialogMinWidth"] = 680.0;
+        dialog.MaxWidth = 840.0;
+
+        var rootStack = new StackPanel { Spacing = 14, HorizontalAlignment = HorizontalAlignment.Stretch, MaxWidth = 740 };
 
         // 1. 說明文字
         var introText = new TextBlock
@@ -102,17 +107,17 @@ public class DatabaseSyncDialog
             FontSize = 13
         });
 
-        var rbModeLocal = new RadioButton
-        {
-            GroupName = "SyncModeGroup",
-            Content = "📁 本地端檔案同步 (推薦：支援選取另一個 SQLite 資料庫檔或 ZIP 備份檔)",
-            IsChecked = true
-        };
-        var rbModeCloud = new RadioButton
-        {
-            GroupName = "SyncModeGroup",
-            Content = "☁️ Google Drive 雲端同步 (透過 Google 帳號備份進行跨裝置同步)"
-        };
+        var rbModeLocal = CreateWrappingRadioButton(
+            "SyncModeGroup",
+            "📁 本地端檔案同步 (推薦)",
+            "支援選取另一個 SQLite 資料庫檔 (*.sqlite3, *.db) 或 ZIP 備份檔進行整併",
+            isChecked: true);
+
+        var rbModeCloud = CreateWrappingRadioButton(
+            "SyncModeGroup",
+            "☁️ Google Drive 雲端同步",
+            "透過 Google 帳號備份進行跨裝置資料庫整併與備份推播");
+
         modeStack.Children.Add(rbModeLocal);
         modeStack.Children.Add(rbModeCloud);
         modeCard.Child = modeStack;
@@ -229,22 +234,21 @@ public class DatabaseSyncDialog
             FontWeight = FontWeights.SemiBold
         });
 
-        var rbLocalBi = new RadioButton
-        {
-            GroupName = "LocalSyncDirGroup",
-            Content = "🔄 雙向整併同步 (推薦：比對兩端差異並由您裁決，整併結果同時寫回本機與目標檔)",
-            IsChecked = true
-        };
-        var rbLocalPull = new RadioButton
-        {
-            GroupName = "LocalSyncDirGroup",
-            Content = "⬇️ 從外部檔案整併至本機 (提取外部檔案之新增與較新資料整併入目前本機)"
-        };
-        var rbLocalPush = new RadioButton
-        {
-            GroupName = "LocalSyncDirGroup",
-            Content = "⬆️ 從本機整併至外部檔案 (將目前本機最新名片庫整併覆蓋至外部目標檔案)"
-        };
+        var rbLocalBi = CreateWrappingRadioButton(
+            "LocalSyncDirGroup",
+            "🔄 雙向整併同步 (推薦)",
+            "比對兩端差異並由您裁決，整併結果同時寫回本機目前庫與外部目標檔案",
+            isChecked: true);
+
+        var rbLocalPull = CreateWrappingRadioButton(
+            "LocalSyncDirGroup",
+            "⬇️ 從外部檔案整併至本機",
+            "提取外部檔案之新增與較新資料整併回目前本機名片庫");
+
+        var rbLocalPush = CreateWrappingRadioButton(
+            "LocalSyncDirGroup",
+            "⬆️ 從本機整併至外部檔案",
+            "將目前本機最新名片庫整併覆蓋至外部目標檔案");
         localDirStack.Children.Add(rbLocalBi);
         localDirStack.Children.Add(rbLocalPull);
         localDirStack.Children.Add(rbLocalPush);
@@ -386,22 +390,22 @@ public class DatabaseSyncDialog
             FontWeight = FontWeights.SemiBold
         });
 
-        var rbCloudBi = new RadioButton
-        {
-            GroupName = "CloudSyncDirGroup",
-            Content = "🔄 雙向同步 (推薦：先自雲端比對整併，再將最新資料回推雲端)",
-            IsChecked = true
-        };
-        var rbCloudPull = new RadioButton
-        {
-            GroupName = "CloudSyncDirGroup",
-            Content = "⬇️ 從雲端同步至本機 (下載雲端資料並比對整併)"
-        };
-        var rbCloudPush = new RadioButton
-        {
-            GroupName = "CloudSyncDirGroup",
-            Content = "⬆️ 從本機同步至雲端 (將本機目前名片庫同步推至雲端)"
-        };
+        var rbCloudBi = CreateWrappingRadioButton(
+            "CloudSyncDirGroup",
+            "🔄 雙向同步 (推薦)",
+            "先自雲端比對整併，再將最新資料回推雲端",
+            isChecked: true);
+
+        var rbCloudPull = CreateWrappingRadioButton(
+            "CloudSyncDirGroup",
+            "⬇️ 從雲端同步至本機",
+            "下載雲端資料並比對整併回本機");
+
+        var rbCloudPush = CreateWrappingRadioButton(
+            "CloudSyncDirGroup",
+            "⬆️ 從本機同步至雲端",
+            "將本機目前名片庫同步推至雲端");
+
         cloudDirStack.Children.Add(rbCloudBi);
         cloudDirStack.Children.Add(rbCloudPull);
         cloudDirStack.Children.Add(rbCloudPush);
@@ -443,7 +447,16 @@ public class DatabaseSyncDialog
         rootStack.Children.Add(progressBar);
         rootStack.Children.Add(statusText);
 
-        dialog.Content = rootStack;
+        var scrollViewer = new ScrollViewer
+        {
+            Content = rootStack,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            MaxHeight = 620,
+            Padding = new Thickness(0, 0, 10, 0)
+        };
+
+        dialog.Content = scrollViewer;
 
         // 模式切換事件
         rbModeLocal.Checked += (s, e) =>
@@ -943,5 +956,34 @@ public class DatabaseSyncDialog
             XamlRoot = _xamlRoot
         };
         await noticeDialog.ShowAsync();
+    }
+
+    private static RadioButton CreateWrappingRadioButton(string groupName, string title, string? subtitle = null, bool isChecked = false)
+    {
+        var stack = new StackPanel { Spacing = 2 };
+        stack.Children.Add(new TextBlock
+        {
+            Text = title,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold
+        });
+        if (!string.IsNullOrWhiteSpace(subtitle))
+        {
+            stack.Children.Add(new TextBlock
+            {
+                Text = subtitle,
+                TextWrapping = TextWrapping.Wrap,
+                FontSize = 11,
+                Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"]
+            });
+        }
+        return new RadioButton
+        {
+            GroupName = groupName,
+            Content = stack,
+            IsChecked = isChecked,
+            Margin = new Thickness(0, 2, 0, 4)
+        };
     }
 }
