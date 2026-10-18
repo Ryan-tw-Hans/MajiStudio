@@ -19,38 +19,85 @@ public interface IAppSettingsService
 }
 
 /// <summary>
-/// Service managing user application preferences stored in %LocalAppData%/MajiOCR.Windows/settings.json.
-/// Conforms to RS-ISSUE-0036, AR-ISSUE-0036, and DBA-ISSUE-0036.
+/// Service managing user application preferences stored in portable &lt;StorageRoot&gt;/settings.json alongside the executable.
+/// Conforms to RS-ISSUE-0036, AR-ISSUE-0036, DBA-ISSUE-0036, and RS-ISSUE-0051.
 /// Implements atomic file replacement, strict UTF-8 validation, allowlist sanitization, and corruption resilience.
 /// </summary>
 public class AppSettingsService : IAppSettingsService
 {
+    public const string DefaultFileName = "settings.json";
     public const int MaxFileSizeBytes = 64 * 1024; // 64 KB limit
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     private readonly string _settingsFilePath;
+    private readonly string? _legacySettingsFilePathOverride;
     private readonly object _lock = new();
 
-    public AppSettingsService(string? customPath = null)
+    public AppSettingsService(string? customPath = null, string? legacySettingsFilePathOverride = null)
     {
+        _legacySettingsFilePathOverride = legacySettingsFilePathOverride;
         if (!string.IsNullOrWhiteSpace(customPath))
         {
             _settingsFilePath = customPath;
         }
         else
         {
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _settingsFilePath = Path.Combine(localAppData, "MajiOCR.Windows", "settings.json");
+            string root = Program.GuiVerificationRoot is string guiRoot
+                ? guiRoot
+                : Storage.StoragePathHelper.GetDefaultStorageRoot();
+            _settingsFilePath = Path.Combine(root, DefaultFileName);
         }
     }
 
     public string SettingsFilePath => _settingsFilePath;
 
+    private void TryMigrateLegacySettingsIfCoLocatedWithDatabase()
+    {
+        try
+        {
+            if (File.Exists(_settingsFilePath)) return;
+
+            string? dir = Path.GetDirectoryName(_settingsFilePath);
+            if (string.IsNullOrWhiteSpace(dir)) return;
+
+            // 僅當同目錄下已存在 contacts.sqlite3（代表這是既有工作目錄，而非移至新空資料夾的獨立主程式）時，才從舊版 %LocalAppData% 單次遷移設定
+            string coLocatedDbPath = Path.Combine(dir, Storage.StoragePathHelper.DatabaseFileName);
+            if (!File.Exists(coLocatedDbPath)) return;
+
+            string legacyPath;
+            if (!string.IsNullOrWhiteSpace(_legacySettingsFilePathOverride))
+            {
+                legacyPath = _legacySettingsFilePathOverride;
+            }
+            else if (Program.GuiVerificationRoot is null && !ViewModels.MainViewModel.IsHeadlessEnvironment)
+            {
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                legacyPath = Path.Combine(localAppData, "MajiOCR.Windows", DefaultFileName);
+            }
+            else
+            {
+                return;
+            }
+
+            if (!File.Exists(legacyPath)) return;
+            var legacyInfo = new FileInfo(legacyPath);
+            if (legacyInfo.Length > MaxFileSizeBytes) return;
+
+            File.Copy(legacyPath, _settingsFilePath, overwrite: false);
+        }
+        catch
+        {
+            // 平滑遷移容錯，不影響正常啟動
+        }
+    }
+
     public AppSettings LoadSettings()
     {
         lock (_lock)
         {
+            TryMigrateLegacySettingsIfCoLocatedWithDatabase();
+
             if (!File.Exists(_settingsFilePath))
             {
                 return CreateDefaultSettings();

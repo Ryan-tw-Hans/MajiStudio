@@ -1,5 +1,10 @@
 # MajiOCR.Windows 變更紀錄
 
+## [0.1.0.31] - 2026-10-18
+- 設定檔完全可攜化（Portable Mode）：將 settings.json 與 custom-fields.json 改為存放於主程式同一目錄下，不再跨目錄共用 %LocalAppData%\MajiOCR.Windows 全域設定與舊自訂欄位 (ISSUE-0051)
+- 新資料庫免沿用舊密碼詢問：啟動時以同目錄 contacts.sqlite3 檔案實際 SQLCipher 加密標頭作為是否要求主密碼解鎖之唯一真相來源；將主程式移至無資料庫或未加密資料庫之資料夾時不再誤彈出密碼詢問視窗
+- 支援原工作目錄（同目錄已存在 contacts.sqlite3）首次啟動時自動將舊版設定檔平滑遷移至主程式同目錄
+
 ## [0.1.0.30] - 2026-10-17
 - 強化本機執行時憑證安全：Google OAuth ClientSecret (google_oauth_config.json) 與 Vercel Access Token (settings.json) 全面改採 Windows DPAPI (CryptProtectData CurrentUser) 加密儲存，並支援既有明文設定自動平滑升級 (ISSUE-0050)
 - 清理公開儲存庫敏感與環境資訊：移除診斷測試中的本機絕對路徑、測試姓名與舊版 Google Drive 資源識別碼，將規格文件連結統一改為相對路徑，並將內部 IssueLog.sqlite3 移出 Git 公開追蹤

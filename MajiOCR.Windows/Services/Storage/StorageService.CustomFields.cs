@@ -42,20 +42,15 @@ public partial class StorageService
             long count = Convert.ToInt64(countCmd.ExecuteScalar() ?? 0);
             if (count > 0) return;
 
-            // 尋找舊版設定檔
+            // 尋找舊版設定檔（ISSUE-0051：僅檢查與資料庫同一儲存目錄下之 custom-fields.json，不再跨目錄讀取 %LocalAppData%）
             string legacyPath;
             if (!string.IsNullOrWhiteSpace(_legacyJsonPathOverride))
             {
                 legacyPath = _legacyJsonPathOverride;
             }
-            else if (_applicationDirectoryMode)
-            {
-                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-                legacyPath = Path.Combine(localAppData, "MajiOCR.Windows", LegacyCustomFieldsFileName);
-            }
             else
             {
-                return; // 自訂/測試儲存目錄隔離，不讀取全域使用者設定
+                legacyPath = Path.Combine(_storageRoot, LegacyCustomFieldsFileName);
             }
             if (!File.Exists(legacyPath)) return;
 

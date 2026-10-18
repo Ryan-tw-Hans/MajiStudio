@@ -1,21 +1,19 @@
-# MajiOCR.Windows 0.1.0-beta.30 (強化本機憑證 Windows DPAPI 加密保護與清理公開儲存庫敏感資訊)
+# MajiOCR.Windows 0.1.0-beta.31 (設定檔完全可攜化與新資料庫免沿用舊密碼詢問)
 
-目前為本機發布版，更新日期為 2026-10-17（Asia/Taipei）。
+目前為本機發布版，更新日期為 2026-10-18（Asia/Taipei）。
 直接執行本資料夾的 `MajiOCR.Windows.exe`。維持單一免安裝、自含執行檔（Self-Contained Single-File Executable）及離線 OCR 模型，並內嵌完整 `MajiOCR.Web` (`0.2.0-beta.1`) 靜態 PWA 資產包。
 
-### 本版更新重點 (`ISSUE-0050`)
-1. **本機執行時憑證 Windows DPAPI (`CryptProtectData` CurrentUser) 加密保護 (`CredentialProtectionHelper`)**：
-   - `GoogleAuthService` (`google_oauth_config.json`) 的 `ClientSecret` 與 `AppSettingsService` (`%LocalAppData%\MajiOCR.Windows\settings.json`) 的 `VercelAccessToken` 全面改以 Windows DPAPI (`dpapi:<Base64>`) 加密落盤，磁碟不再保存明文秘密，防止整個可攜式資料夾複製或分享時外洩憑證。
-   - 支援既有明文設定檔（含 UTF-8 BOM 相容）首次載入時自動平滑升級為 DPAPI 密文；跨電腦或損毀密文無法解密時安全回退為空值並提示重新設定，絕不引發崩潰。
-2. **儲存庫公開敏感資訊與環境資訊全面清理**：
-   - 移除 `Issue0035AutomatedTestSuite.cs` 寫死的個人工作階段路徑與真實姓名，並將測試套件中的企業信箱網域統一替換為 RFC 2606 保留測試網域 `example.com`。
-   - `DefaultUpdateSettings.json` 與 `CHANGELOG.txt` 移除舊版個人 Google Drive 資源識別碼，預設更新來源統一指向官方 GitHub Releases API (`https://api.github.com/repos/Ryan-tw-Hans/MajiStudio/releases/latest`)。
-   - 14 份正式文件（`Architecture/`、`DesignPlans/`、`Requirements/`、`TestPlans/`、`TestReports/`）中的本機絕對路徑連結統一改為儲存庫相對路徑。
-   - 將內部 `IssueLog/IssueLog.sqlite3` 移出 Git 公開追蹤（本機完整保留），並將本機 Git 提交信箱更新為 GitHub noreply 信箱。
+### 本版更新重點 (`ISSUE-0051`)
+1. **設定檔與自訂欄位完全可攜化（Portable Mode）**：
+   - `AppSettingsService`（`settings.json`）與 `CustomFieldCatalogService` / `StorageService.TryMigrateLegacyJson`（`custom-fields.json`）預設路徑全面改為與主程式同一目錄下（`<主程式所在目錄>\settings.json`、`<主程式所在目錄>\custom-fields.json`），不再跨目錄共用 `%LocalAppData%\MajiOCR.Windows\` 的全域設定與舊自訂欄位。
+   - 支援原工作目錄（同目錄下已存在 `contacts.sqlite3`）首次啟動時，自動將舊版設定檔平滑遷移至主程式同目錄。
+2. **新資料庫免沿用舊密碼詢問（以 `contacts.sqlite3` 實際加密標頭為唯一依據）**：
+   - 新增 `StorageService.ResolveStartupSecurityState`：啟動時僅在同目錄下的 `contacts.sqlite3` 存在且實際為 SQLCipher 加密格式（`IsDatabaseEncrypted(dbPath) == true`）時，才彈出「🔐 名片管理資料庫已加密」解鎖對話框。
+   - 當主程式移至沒有 `contacts.sqlite3` 的新資料夾，或同目錄下為未加密資料庫時，啟動時絕不詢問舊密碼，並自動將孤立的 `IsPasswordProtected` 校正為 `false`，確保新建資料庫為乾淨未加密狀態。
 
 ---
-- **FileVersion**：0.1.0.30 (`0.1.0-beta.30`)
-- **SHA-256**：`0894FB88EBEC0EAC84A02D4A606413284A80F5BD0BB679D3A261E1C297935C3D`
-- **檔案大小**：299,865,635 位元組 (~286.0 MB)
+- **FileVersion**：0.1.0.31 (`0.1.0-beta.31`)
+- **SHA-256**：`3D3C65560198FE36AF95A3F6C7EA0EE825DB0692A90007031BD1C238276AC218`
+- **檔案大小**：299,882,019 位元組 (~286.0 MB)
 
-本機單檔發布驗證與自動化測試套件（`ISSUE-0050` 5/5 PASS、`ISSUE-0046` 3/3 PASS、`ISSUE-0040` 4/4 PASS、`ISSUE-0036` 7/7 PASS、`ISSUE-0035` 5/5 PASS、`ISSUE-0022` 8/8 PASS）均已全數通過。
+本機單檔發布驗證與自動化測試套件（`ISSUE-0051` 5/5 PASS、`ISSUE-0050` 5/5 PASS、`ISSUE-0043` 5/5 PASS、`ISSUE-0038` 11/11 PASS、`ISSUE-0036` 7/7 PASS）均已全數通過。

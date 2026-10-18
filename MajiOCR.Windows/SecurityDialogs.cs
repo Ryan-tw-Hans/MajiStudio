@@ -141,7 +141,11 @@ public static class SecurityDialogs
     public static async Task ShowSecuritySettingsDialogAsync(XamlRoot xamlRoot, IStorageService storageService, IAppSettingsService settingsService)
     {
         var settings = settingsService.LoadSettings();
-        bool isProtected = settings.IsPasswordProtected || storageService.IsEncrypted;
+        bool isProtected = storageService.IsEncrypted;
+        if (!isProtected && settings.IsPasswordProtected)
+        {
+            settingsService.UpdateSecuritySettings(false, null, null);
+        }
 
         var dialog = new ContentDialog
         {

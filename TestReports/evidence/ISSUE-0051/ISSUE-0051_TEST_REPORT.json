@@ -1,0 +1,47 @@
+﻿{
+  "Timestamp": "2026-10-18T00:52:23.2308885Z",
+  "Version": "0.1.0-beta.31",
+  "IssueId": "ISSUE-0051",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 5,
+  "PassCount": 5,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "TC-0051-01",
+      "Description": "\u9A57\u8B49 AppSettingsService \u8207 CustomFieldCatalogService \u9810\u8A2D\u8DEF\u5F91\u8DDF\u96A8\u4E3B\u7A0B\u5F0F\u6240\u5728\u76EE\u9304\u800C\u975E AppData",
+      "Passed": true,
+      "Details": "DefaultRoot=MajiOCR.Windows, SettingsCoLocated=true, CatalogCoLocated=true",
+      "LatencyMs": 3
+    },
+    {
+      "TestId": "TC-0051-02",
+      "Description": "\u9A57\u8B49\u4E3B\u7A0B\u5F0F\u79FB\u81F3\u7121 contacts.sqlite3 \u7684\u65B0\u8CC7\u6599\u593E\u6642\uFF0C\u4E0D\u9077\u79FB\u820A\u8A2D\u5B9A\u3001\u4E0D\u8A62\u554F\u820A\u5BC6\u78BC\u4E14\u4E0D\u532F\u5165\u8DE8\u76EE\u9304\u81EA\u8A02\u6B04\u4F4D",
+      "Passed": true,
+      "Details": "LegacySettingsIgnored=true, RequiresUnlock=false, NewDbUnencrypted=true, CustomFieldsCount=0",
+      "LatencyMs": 651
+    },
+    {
+      "TestId": "TC-0051-03",
+      "Description": "\u9A57\u8B49 settings.json \u6B98\u7559 IsPasswordProtected=true \u4F46\u7121\u8CC7\u6599\u5EAB\u6216\u8CC7\u6599\u5EAB\u672A\u52A0\u5BC6\u6642\uFF0C\u514D\u5BC6\u78BC\u555F\u52D5\u4E26\u81EA\u52D5\u6821\u6B63\u8A2D\u5B9A",
+      "Passed": true,
+      "Details": "ScenarioA_NoDbReset=true, ScenarioB_PlainDbReset=true, RequiresUnlock=false",
+      "LatencyMs": 266
+    },
+    {
+      "TestId": "TC-0051-04",
+      "Description": "\u9A57\u8B49\u540C\u76EE\u9304\u5B58\u5728\u5DF2\u52A0\u5BC6 contacts.sqlite3 \u6642\uFF0C\u5373\u4F7F\u7121 settings.json \u4ECD\u5F37\u5236\u8981\u6C42\u4E3B\u5BC6\u78BC\u89E3\u9396",
+      "Passed": true,
+      "Details": "EncryptedDbRequiresUnlock=true, WrongPassRejected=true, RightPassAccepted=true",
+      "LatencyMs": 5715
+    },
+    {
+      "TestId": "TC-0051-05",
+      "Description": "\u9A57\u8B49\u539F\u5DE5\u4F5C\u76EE\u9304\u5DF2\u6709 contacts.sqlite3 \u6642\u5E73\u6ED1\u9077\u79FB\u820A settings.json\uFF0C\u4E14\u652F\u63F4\u540C\u76EE\u9304 custom-fields.json \u532F\u5165",
+      "Passed": true,
+      "Details": "CoLocatedMigrationSuccess=true, CoLocatedCustomFieldsImported=true",
+      "LatencyMs": 72
+    }
+  ]
+}

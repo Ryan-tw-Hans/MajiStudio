@@ -19,8 +19,11 @@ namespace MajiOCR_Windows;
 
 public sealed partial class MainPage : Page
 {
-    public MainViewModel ViewModel { get; } = new(new CustomFieldCatalogService(
-        Program.GuiVerificationRoot is string root ? System.IO.Path.Combine(root, "custom-fields.json") : null));
+    public MainViewModel ViewModel { get; } = new(
+        new CustomFieldCatalogService(
+            Program.GuiVerificationRoot is string root ? System.IO.Path.Combine(root, "custom-fields.json") : null),
+        settingsService: new AppSettingsService(
+            Program.GuiVerificationRoot is string sRoot ? System.IO.Path.Combine(sRoot, "settings.json") : null));
 
     private readonly UpdateService _updateService = new();
 
@@ -67,10 +70,10 @@ public sealed partial class MainPage : Page
             string storageRoot = Program.GuiVerificationRoot is string root ? System.IO.Path.Combine(root, "Storage") : MajiOCR_Windows.Services.Storage.StoragePathHelper.GetDefaultStorageRoot();
             string dbPath = System.IO.Path.Combine(storageRoot, MajiOCR_Windows.Services.Storage.StoragePathHelper.DatabaseFileName);
 
-            var settings = ViewModel.SettingsService.LoadSettings();
+            var securityResolution = MajiOCR_Windows.Services.Storage.StorageService.ResolveStartupSecurityState(dbPath, ViewModel.SettingsService);
             string? passphrase = null;
 
-            if (settings.IsPasswordProtected || MajiOCR_Windows.Services.Storage.StorageService.IsDatabaseEncrypted(dbPath))
+            if (securityResolution.RequiresUnlock)
             {
                 if (XamlRoot != null)
                 {

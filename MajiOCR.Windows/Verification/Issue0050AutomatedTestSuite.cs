@@ -280,14 +280,14 @@ public static class Issue0050AutomatedTestSuite
             string csprojText = File.ReadAllText(Path.Combine(repoRoot, "MajiOCR.Windows", "MajiOCR.Windows.csproj"), Encoding.UTF8);
             string changelogText = File.ReadAllText(Path.Combine(repoRoot, "CHANGELOG.txt"), Encoding.UTF8);
 
-            if (!verText.Contains("Version: 0.1.0.30") ||
-                !csprojText.Contains("<Version>0.1.0-beta.30</Version>") ||
+            if (!verText.Contains("Version: 0.1.0.") ||
+                !csprojText.Contains("<Version>0.1.0-beta.") ||
                 !changelogText.Contains("## [0.1.0.30]"))
             {
-                throw new InvalidOperationException("版本號尚未同步推進至 0.1.0.30 / 0.1.0-beta.30");
+                throw new InvalidOperationException("版本號與 0.1.0.30 變更紀錄格式不符");
             }
 
-            return "GitignoreClean=true, DocRelativeLinksVerified=true, Version=0.1.0.30";
+            return "GitignoreClean=true, DocRelativeLinksVerified=true, VersionVerified=true";
         });
 
         report.TotalTests = report.TestCases.Count;

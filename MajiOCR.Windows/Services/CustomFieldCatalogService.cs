@@ -13,8 +13,8 @@ namespace MajiOCR_Windows.Services;
 /// <summary>
 /// Service managing user custom field definitions.
 /// When attached to StorageService, definitions are stored directly in SQLite database (ISSUE-0043).
-/// Legacy fallback uses %LocalAppData%/MajiOCR.Windows/custom-fields.json.
-/// Conforms to RS-ISSUE-0006-v0.2 and RS-ISSUE-0043-v0.1.
+/// Legacy fallback uses portable &lt;StorageRoot&gt;/custom-fields.json alongside the executable (ISSUE-0051).
+/// Conforms to RS-ISSUE-0006-v0.2, RS-ISSUE-0043-v0.1, and RS-ISSUE-0051-v0.1.
 /// </summary>
 public class CustomFieldCatalogService
 {
@@ -42,8 +42,10 @@ public class CustomFieldCatalogService
         }
         else
         {
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            _catalogFilePath = Path.Combine(localAppData, "MajiOCR.Windows", "custom-fields.json");
+            string root = Program.GuiVerificationRoot is string guiRoot
+                ? guiRoot
+                : StoragePathHelper.GetDefaultStorageRoot();
+            _catalogFilePath = Path.Combine(root, "custom-fields.json");
         }
     }
 

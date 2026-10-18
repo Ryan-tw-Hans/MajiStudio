@@ -841,6 +841,21 @@ public static class Program
             return;
         }
 
+        if (Array.Exists(args, a => a.Equals("--test-issue-0051", StringComparison.OrdinalIgnoreCase) ||
+                                    a.Equals("--issue-0051-test", StringComparison.OrdinalIgnoreCase) ||
+                                    a.Equals("--test-portable-settings", StringComparison.OrdinalIgnoreCase)))
+        {
+            AttachConsole(ATTACH_PARENT_PROCESS);
+            string evidenceDir = ResolveEvidenceDir(args, "ISSUE-0051");
+            var report = Task.Run(() => Issue0051AutomatedTestSuite.RunAllTestsAsync(evidenceDir)).GetAwaiter().GetResult();
+            Directory.CreateDirectory(evidenceDir);
+            string json = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(Path.Combine(evidenceDir, "ISSUE-0051_TEST_REPORT.json"), json, Encoding.UTF8);
+            Console.WriteLine(json);
+            Environment.Exit(report.OverallSuccess ? 0 : 1);
+            return;
+        }
+
         int guiRootIndex = Array.FindIndex(args, a => a.Equals("--gui-test-root", StringComparison.OrdinalIgnoreCase));
         if (guiRootIndex >= 0)
         {

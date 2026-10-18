@@ -90,6 +90,41 @@ public partial class StorageService : IStorageService, ITagStorageService
         }
     }
 
+    public readonly record struct StartupSecurityResolution(
+        bool RequiresUnlock,
+        bool IsDatabaseFilePresent,
+        bool IsDatabaseEncrypted,
+        bool WasStaleSettingsReset);
+
+    /// <summary>
+    /// Coordinates startup password unlock requirements using the actual SQLCipher header of contacts.sqlite3
+    /// as the single source of truth (RS-ISSUE-0051 / DBA-ISSUE-0051).
+    /// If contacts.sqlite3 does not exist or is not encrypted, no password unlock is required and any stale
+    /// IsPasswordProtected flag in settings.json is automatically reset to false.
+    /// </summary>
+    public static StartupSecurityResolution ResolveStartupSecurityState(string dbPath, IAppSettingsService? settingsService)
+    {
+        bool fileExists = File.Exists(dbPath);
+        bool isEncrypted = fileExists && IsDatabaseEncrypted(dbPath);
+        bool staleReset = false;
+
+        if (settingsService != null)
+        {
+            var settings = settingsService.LoadSettings();
+            if (!isEncrypted && settings.IsPasswordProtected)
+            {
+                settingsService.UpdateSecuritySettings(false, null, null);
+                staleReset = true;
+            }
+        }
+
+        return new StartupSecurityResolution(
+            RequiresUnlock: isEncrypted,
+            IsDatabaseFilePresent: fileExists,
+            IsDatabaseEncrypted: isEncrypted,
+            WasStaleSettingsReset: staleReset);
+    }
+
     public static bool TryVerifyPassphrase(string dbPath, string? passphrase, out string? error)
     {
         error = null;

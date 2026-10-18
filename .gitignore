@@ -19,6 +19,8 @@ sample/
 
 # 3. 認證金鑰、憑證與個人設定檔
 google_oauth_config.json
+settings.json
+custom-fields.json
 *token*.json
 *secret*.json
 publish-targets.json
