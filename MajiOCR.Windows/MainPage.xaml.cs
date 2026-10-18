@@ -1509,6 +1509,13 @@ public sealed partial class MainPage : Page
         await panel.ShowRestoreDialogAsync();
     }
 
+    private async void OnSyncDatabaseClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ShowDatabaseSyncDialogAsync();
+    }
+
     private async void OnExportOutlookClicked(object sender, RoutedEventArgs e)
     {
         if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;

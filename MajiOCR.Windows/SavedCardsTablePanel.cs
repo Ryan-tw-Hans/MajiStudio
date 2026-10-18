@@ -257,21 +257,21 @@ public sealed class SavedCardsTablePanel : UserControl
         _autoFitColsBtn.Click += (s, e) => AutoFitAllColumns();
         searchGroup.Children.Add(_autoFitColsBtn);
 
-        // Standalone Database Cloud Sync Button
+        // Standalone Database Sync Button
         var syncCenterBtn = new Button
         {
-            Content = "🔄 雲端同步",
+            Content = "🔄 資料庫同步",
             Style = (Style)Application.Current.Resources["AccentButtonStyle"],
             VerticalAlignment = VerticalAlignment.Center
         };
-        ToolTipService.SetToolTip(syncCenterBtn, "開啟資料庫雲端同步中心：支援雙向同步、雲端至本機整併或本機同步至雲端");
+        ToolTipService.SetToolTip(syncCenterBtn, "開啟名片資料庫同步中心：支援本機端雙資料庫整併與 Google Drive 雲端同步");
         syncCenterBtn.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
         searchGroup.Children.Add(syncCenterBtn);
 
         // Export and Sync DropDownButton
         var exportFlyout = new MenuFlyout();
 
-        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫雲端同步 (單向/雙向整併)..." };
+        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫同步 (本機檔案 / 雲端)..." };
         dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
         exportFlyout.Items.Add(dbSyncItem);
 
@@ -3018,6 +3018,11 @@ public sealed class SavedCardsTablePanel : UserControl
             }
             catch { }
         }
+    }
+
+    public async Task ShowDatabaseSyncDialogAsync()
+    {
+        await OnDatabaseSyncClickedAsync();
     }
 
     private async Task OnDatabaseSyncClickedAsync()
