@@ -1,19 +1,25 @@
-# MajiOCR.Windows 0.1.0-beta.31 (設定檔完全可攜化與新資料庫免沿用舊密碼詢問)
+# MajiOCR.Windows 0.1.0-beta.32 (多裝置同步之資料庫整併與衝突差異比對)
 
 目前為本機發布版，更新日期為 2026-10-18（Asia/Taipei）。
 直接執行本資料夾的 `MajiOCR.Windows.exe`。維持單一免安裝、自含執行檔（Self-Contained Single-File Executable）及離線 OCR 模型，並內嵌完整 `MajiOCR.Web` (`0.2.0-beta.1`) 靜態 PWA 資產包。
 
-### 本版更新重點 (`ISSUE-0051`)
-1. **設定檔與自訂欄位完全可攜化（Portable Mode）**：
-   - `AppSettingsService`（`settings.json`）與 `CustomFieldCatalogService` / `StorageService.TryMigrateLegacyJson`（`custom-fields.json`）預設路徑全面改為與主程式同一目錄下（`<主程式所在目錄>\settings.json`、`<主程式所在目錄>\custom-fields.json`），不再跨目錄共用 `%LocalAppData%\MajiOCR.Windows\` 的全域設定與舊自訂欄位。
-   - 支援原工作目錄（同目錄下已存在 `contacts.sqlite3`）首次啟動時，自動將舊版設定檔平滑遷移至主程式同目錄。
-2. **新資料庫免沿用舊密碼詢問（以 `contacts.sqlite3` 實際加密標頭為唯一依據）**：
-   - 新增 `StorageService.ResolveStartupSecurityState`：啟動時僅在同目錄下的 `contacts.sqlite3` 存在且實際為 SQLCipher 加密格式（`IsDatabaseEncrypted(dbPath) == true`）時，才彈出「🔐 名片管理資料庫已加密」解鎖對話框。
-   - 當主程式移至沒有 `contacts.sqlite3` 的新資料夾，或同目錄下為未加密資料庫時，啟動時絕不詢問舊密碼，並自動將孤立的 `IsPasswordProtected` 校正為 `false`，確保新建資料庫為乾淨未加密狀態。
+### 本版更新重點 (`ISSUE-0052`)
+1. **獨立【🔄 雲端同步】功能中心 (`DatabaseSyncDialog`)**：
+   - 頂部導航列提供獨立雲端同步入口，支援「雙向同步（智慧整併）」、「從雲端拉取至本機 (Pull)」及「推送到雲端 (Push)」三種同步方向模式。
+2. **極致友善與專業的資料庫比對裁決介面 (`DatabaseMergeDialog`)**：
+   - 四色統計儀表卡（本機獨有、外部新增、完全一致、內容衝突）與一鍵全選裁決工具列（採納較新、保留本機、採納外部、兩側保留）。
+   - 左右並列雙欄對照（Side-by-Side Diff），清晰呈現雙方最後更新時間與綠色「較新」徽章標籤。
+   - 差異欄位背景色塊突顯高亮與即時關鍵字模糊過濾搜尋。
+   - 三態卡片按鈕裁決（保留本機、採納外部、兩側同時保留）及即時白話決策提示。
+3. **兩側同時保留 (Keep Both) 複製副本**：
+   - 衝突名片支援兩側同時保留，外部版本自動配發新 UUID 並註記「(同步副本)」，實體名片圖檔安全複製重命名。
+4. **單一交易與本機安全快照防護**：
+   - 整併執行前自動備份至 `backups/` 目錄，整併作業於單一 SQLite 交易（ACID）內完成。
 
 ---
-- **FileVersion**：0.1.0.31 (`0.1.0-beta.31`)
-- **SHA-256**：`3D3C65560198FE36AF95A3F6C7EA0EE825DB0692A90007031BD1C238276AC218`
-- **檔案大小**：299,882,019 位元組 (~286.0 MB)
+- **FileVersion**：0.1.0.32 (`0.1.0-beta.32`)
+- **SHA-256**：`33AED288CADE48DD3F5E812030C5CC573E18DD44068342CFC2959FF67D8CB627`
+- **檔案大小**：299,968,035 位元組 (~286.1 MB)
 
-本機單檔發布驗證與自動化測試套件（`ISSUE-0051` 5/5 PASS、`ISSUE-0050` 5/5 PASS、`ISSUE-0043` 5/5 PASS、`ISSUE-0038` 11/11 PASS、`ISSUE-0036` 7/7 PASS）均已全數通過。
+本機單檔發布驗證與自動化測試套件（`ISSUE-0052` 7/7 PASS、`ISSUE-0051` 5/5 PASS、`ISSUE-0050` 5/5 PASS、`ISSUE-0043` 5/5 PASS、`ISSUE-0038` 11/11 PASS、`ISSUE-0036` 7/7 PASS）均已全數通過。
+

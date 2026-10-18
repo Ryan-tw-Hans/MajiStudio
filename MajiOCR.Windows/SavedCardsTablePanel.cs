@@ -33,6 +33,7 @@ public sealed class SavedCardsTablePanel : UserControl
     private readonly IGoogleAuthService _authService;
     private readonly IGoogleDriveBackupService _driveBackupService;
     private readonly IAppSettingsService _settingsService;
+    private readonly IDatabaseMergeService _databaseMergeService;
     public event EventHandler<string>? ActiveContactDeleted;
     public event EventHandler? RequestNavigateToScan;
     public event EventHandler<ContactDetailModel>? RequestReloadContact;
@@ -140,6 +141,7 @@ public sealed class SavedCardsTablePanel : UserControl
         _authService = authService ?? new GoogleAuthService();
         _driveBackupService = driveBackupService ?? new GoogleDriveBackupService();
         _settingsService = settingsService ?? new AppSettingsService();
+        _databaseMergeService = new DatabaseMergeService();
 
         BuildVisualTree();
 
@@ -255,8 +257,25 @@ public sealed class SavedCardsTablePanel : UserControl
         _autoFitColsBtn.Click += (s, e) => AutoFitAllColumns();
         searchGroup.Children.Add(_autoFitColsBtn);
 
+        // Standalone Database Cloud Sync Button
+        var syncCenterBtn = new Button
+        {
+            Content = "🔄 雲端同步",
+            Style = (Style)Application.Current.Resources["AccentButtonStyle"],
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        ToolTipService.SetToolTip(syncCenterBtn, "開啟資料庫雲端同步中心：支援雙向同步、雲端至本機整併或本機同步至雲端");
+        syncCenterBtn.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
+        searchGroup.Children.Add(syncCenterBtn);
+
         // Export and Sync DropDownButton
         var exportFlyout = new MenuFlyout();
+
+        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫雲端同步 (單向/雙向整併)..." };
+        dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
+        exportFlyout.Items.Add(dbSyncItem);
+
+        exportFlyout.Items.Add(new MenuFlyoutSeparator());
 
         var outlookItem = new MenuFlyoutItem { Text = "📁 匯出 Outlook 聯絡人表單 (*.csv)" };
         outlookItem.Click += async (s, e) => await OnExportOutlookClickedAsync();
@@ -2352,6 +2371,14 @@ public sealed class SavedCardsTablePanel : UserControl
             };
             stack.Children.Add(warningText);
 
+            var modePanel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, Margin = new Thickness(0, 4, 0, 4) };
+            var rbMerge = new RadioButton { GroupName = "DriveRestoreMode", Content = "🔄 資料庫整併 (比對差異，推薦)", IsChecked = true };
+            var rbOverwrite = new RadioButton { GroupName = "DriveRestoreMode", Content = "⚠️ 完全覆蓋現有名片庫" };
+            modePanel.Children.Add(new TextBlock { Text = "處理方式：", FontWeight = FontWeights.Medium, VerticalAlignment = VerticalAlignment.Center });
+            modePanel.Children.Add(rbMerge);
+            modePanel.Children.Add(rbOverwrite);
+            stack.Children.Add(modePanel);
+
             var progressBar = new ProgressBar { Minimum = 0, Maximum = 100, Value = 0, Width = 560, Visibility = Visibility.Collapsed };
             stack.Children.Add(progressBar);
 
@@ -2608,6 +2635,13 @@ public sealed class SavedCardsTablePanel : UserControl
                         return;
                     }
 
+                    if (rbMerge.IsChecked == true)
+                    {
+                        dialog.Hide();
+                        await ExecuteDatabaseMergeFlowAsync(tempZip, selectedVersion.FileName, enteredPassphrase);
+                        return;
+                    }
+
                     var restoreResult = await _driveBackupService.RestoreLocalBackupPackageAsync(tempZip, storageRoot, enteredPassphrase, progress);
                     progressBar.Value = 100;
                     statusText.Text = restoreResult.Message;
@@ -2823,38 +2857,181 @@ public sealed class SavedCardsTablePanel : UserControl
 
             var confirmDialog = new ContentDialog
             {
-                Title = "確認還原備份",
+                Title = "📦 還原或整併名片備份",
                 Content = new TextBlock
                 {
-                    Text = $"即將自以下備份檔進行還原：\n{srcFile.Path}\n\n⚠️ 還原將會覆蓋目前的所有名片資料與圖片庫。確定要繼續還原嗎？",
+                    Text = $"來源備份檔：\n{srcFile.Path}\n\n" +
+                           $"請選擇處理方式：\n\n" +
+                           $"• 【🔄 整併資料庫 (推薦)】：比對差異並顯示更新時間，讓您選擇保留本機、採納外部或兩側同時保留。\n\n" +
+                           $"• 【⚠️ 整包覆蓋】：以該備份檔完全取代目前名片庫 (現有名片將被覆蓋)。",
                     TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 480
+                    MaxWidth = 520
                 },
-                PrimaryButtonText = "確定還原",
+                PrimaryButtonText = "🔄 整併資料庫",
+                SecondaryButtonText = "⚠️ 整包覆蓋",
                 CloseButtonText = "取消",
-                DefaultButton = ContentDialogButton.Close,
+                DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = this.XamlRoot
             };
             var confirmResult = await confirmDialog.ShowAsync();
-            if (confirmResult != ContentDialogResult.Primary) return;
+            if (confirmResult == ContentDialogResult.None) return;
 
-            var result = await _driveBackupService.RestoreLocalBackupPackageAsync(
-                srcFile.Path, storageRoot, _storageService.CurrentPassphrase);
-
-            if (result.Success)
+            if (confirmResult == ContentDialogResult.Primary)
             {
-                await ShowNoticeDialogAsync("還原成功", result.Message + "\n\n名片資料庫與圖檔庫已還原完畢。");
-                await RefreshDataAsync();
+                await ExecuteDatabaseMergeFlowAsync(srcFile.Path, srcFile.Name);
             }
-            else
+            else if (confirmResult == ContentDialogResult.Secondary)
             {
-                await ShowNoticeDialogAsync("還原失敗", result.Message);
+                var result = await _driveBackupService.RestoreLocalBackupPackageAsync(
+                    srcFile.Path, storageRoot, _storageService.CurrentPassphrase);
+
+                if (result.Success)
+                {
+                    await ShowNoticeDialogAsync("還原成功", result.Message + "\n\n名片資料庫與圖檔庫已還原完畢。");
+                    await RefreshDataAsync();
+                }
+                else
+                {
+                    await ShowNoticeDialogAsync("還原失敗", result.Message);
+                }
             }
         }
         catch (Exception ex)
         {
             await ShowNoticeDialogAsync("本機還原失敗", $"發生錯誤：{ex.Message}");
         }
+    }
+
+    private async Task<bool> ExecuteDatabaseMergeFlowAsync(string zipFilePath, string sourceDisplayName, string? enteredPassphrase = null)
+    {
+        string storageRoot = StoragePathHelper.GetDefaultStorageRoot();
+        string tempStagingDir = Path.Combine(Path.GetTempPath(), $"merge_staging_{Guid.NewGuid():N}");
+        try
+        {
+            if (!File.Exists(zipFilePath))
+            {
+                await ShowNoticeDialogAsync("檔案不存在", $"找不到指定的備份檔案：{zipFilePath}");
+                return false;
+            }
+
+            Directory.CreateDirectory(tempStagingDir);
+            System.IO.Compression.ZipFile.ExtractToDirectory(zipFilePath, tempStagingDir);
+
+            string remoteDbPath = Path.Combine(tempStagingDir, StoragePathHelper.DatabaseFileName);
+            if (!File.Exists(remoteDbPath))
+            {
+                await ShowNoticeDialogAsync("備份檔案無效", "備份包內缺少 contacts.sqlite3 資料庫檔案。");
+                return false;
+            }
+
+            bool isRemoteEncrypted = StorageService.IsDatabaseEncrypted(remoteDbPath);
+            string? remotePassphrase = enteredPassphrase;
+            if (isRemoteEncrypted && string.IsNullOrEmpty(remotePassphrase))
+            {
+                if (!string.IsNullOrEmpty(_storageService.CurrentPassphrase) &&
+                    StorageService.TryVerifyPassphrase(remoteDbPath, _storageService.CurrentPassphrase, out _))
+                {
+                    remotePassphrase = _storageService.CurrentPassphrase;
+                }
+                else
+                {
+                    var pwdPromptDialog = new ContentDialog
+                    {
+                        Title = "🔐 備份資料庫受密碼保護",
+                        PrimaryButtonText = "解鎖比對",
+                        CloseButtonText = "取消",
+                        DefaultButton = ContentDialogButton.Primary,
+                        XamlRoot = this.XamlRoot
+                    };
+                    var pwdStack = new StackPanel { Spacing = 8, Width = 360 };
+                    pwdStack.Children.Add(new TextBlock { Text = "外部備份資料庫已受 SQLCipher 加密，請輸入該備份檔的主密碼以進行資料比對：" });
+                    var pwdBox = new PasswordBox { PlaceholderText = "請輸入備份密碼" };
+                    var pwdErr = new TextBlock { Foreground = new SolidColorBrush(Microsoft.UI.Colors.Red), Visibility = Visibility.Collapsed, TextWrapping = TextWrapping.Wrap };
+                    pwdStack.Children.Add(pwdBox);
+                    pwdStack.Children.Add(pwdErr);
+                    pwdPromptDialog.Content = pwdStack;
+
+                    pwdPromptDialog.PrimaryButtonClick += (s, e) =>
+                    {
+                        if (string.IsNullOrEmpty(pwdBox.Password) || !StorageService.TryVerifyPassphrase(remoteDbPath, pwdBox.Password, out var err))
+                        {
+                            e.Cancel = true;
+                            pwdErr.Text = "密碼錯誤或無法解密該資料庫。";
+                            pwdErr.Visibility = Visibility.Visible;
+                        }
+                        else
+                        {
+                            remotePassphrase = pwdBox.Password;
+                        }
+                    };
+
+                    var res = await pwdPromptDialog.ShowAsync();
+                    if (res != ContentDialogResult.Primary || string.IsNullOrEmpty(remotePassphrase))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            var diffReport = await _databaseMergeService.CompareDatabasesAsync(
+                storageRoot,
+                tempStagingDir,
+                _storageService.CurrentPassphrase,
+                remotePassphrase);
+
+            var mergeDialog = new DatabaseMergeDialog(this.XamlRoot, diffReport, sourceDisplayName);
+            bool shouldProceed = await mergeDialog.ShowAsync();
+            if (!shouldProceed) return false;
+
+            var mergeResult = await _databaseMergeService.ExecuteMergeAsync(
+                storageRoot,
+                tempStagingDir,
+                diffReport,
+                _storageService.CurrentPassphrase,
+                remotePassphrase);
+
+            if (mergeResult.Success)
+            {
+                await ShowNoticeDialogAsync("資料庫整併成功", mergeResult.Message);
+                await RefreshDataAsync();
+                return true;
+            }
+            else
+            {
+                await ShowNoticeDialogAsync("資料庫整併失敗", mergeResult.Message);
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("整併過程發生錯誤", ex.Message);
+            return false;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempStagingDir))
+                {
+                    Directory.Delete(tempStagingDir, true);
+                }
+            }
+            catch { }
+        }
+    }
+
+    private async Task OnDatabaseSyncClickedAsync()
+    {
+        if (this.XamlRoot == null) return;
+        var syncDialog = new DatabaseSyncDialog(
+            this.XamlRoot,
+            _authService,
+            _driveBackupService,
+            _databaseMergeService,
+            _storageService,
+            _settingsService,
+            RefreshDataAsync);
+        await syncDialog.ShowAsync();
     }
 
     #endregion
