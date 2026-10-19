@@ -41,6 +41,9 @@
                 <AppBarButton Icon="Sync" Label="同步名片資料庫 (本機/雲端)..." Click="OnSyncDatabaseClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton x:Name="DeployVercelMenuButton" Icon="Globe" Label="📱 iOS / Web 行動版 (GitHub Pages / Vercel)..." Click="OnDeployVercelClicked" />
                 <AppBarSeparator />
+                <AppBarButton Icon="Download" Label="📥 匯入名片資料 (Excel / CSV)..." Click="OnImportExcelCsvClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="OpenFile" Label="📊 匯出至 Excel 工作表 (*.xlsx)" Click="OnExportExcelClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="OpenFile" Label="📁 匯出至完整名片 CSV (*.csv)" Click="OnExportFullCsvClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="OpenFile" Label="匯出至 Outlook CSV (*.csv)" Click="OnExportOutlookClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="OpenFile" Label="匯出至 Google 聯絡人 (*.csv)" Click="OnExportGoogleClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="Contact" Label="匯出至通用名片檔 (*.vcf)" Click="OnExportVCardClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />

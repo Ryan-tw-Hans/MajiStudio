@@ -1516,6 +1516,27 @@ public sealed partial class MainPage : Page
         await panel.ShowDatabaseSyncDialogAsync();
     }
 
+    private async void OnImportExcelCsvClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ImportExcelCsvAsync();
+    }
+
+    private async void OnExportExcelClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ExportExcelAsync();
+    }
+
+    private async void OnExportFullCsvClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ExportFullCsvAsync();
+    }
+
     private async void OnExportOutlookClicked(object sender, RoutedEventArgs e)
     {
         if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;

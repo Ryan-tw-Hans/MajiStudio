@@ -34,6 +34,7 @@ public sealed class SavedCardsTablePanel : UserControl
     private readonly IGoogleDriveBackupService _driveBackupService;
     private readonly IAppSettingsService _settingsService;
     private readonly IDatabaseMergeService _databaseMergeService;
+    private readonly IContactExcelCsvService _excelCsvService;
     public event EventHandler<string>? ActiveContactDeleted;
     public event EventHandler? RequestNavigateToScan;
     public event EventHandler<ContactDetailModel>? RequestReloadContact;
@@ -142,6 +143,7 @@ public sealed class SavedCardsTablePanel : UserControl
         _driveBackupService = driveBackupService ?? new GoogleDriveBackupService();
         _settingsService = settingsService ?? new AppSettingsService();
         _databaseMergeService = new DatabaseMergeService();
+        _excelCsvService = new ContactExcelCsvService();
 
         BuildVisualTree();
 
@@ -271,11 +273,19 @@ public sealed class SavedCardsTablePanel : UserControl
         // Export and Sync DropDownButton
         var exportFlyout = new MenuFlyout();
 
-        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫同步 (本機檔案 / 雲端)..." };
-        dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
-        exportFlyout.Items.Add(dbSyncItem);
+        var importItem = new MenuFlyoutItem { Text = "📥 匯入名片資料 (Excel / CSV)..." };
+        importItem.Click += async (s, e) => await OnImportExcelCsvClickedAsync();
+        exportFlyout.Items.Add(importItem);
 
         exportFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        var excelItem = new MenuFlyoutItem { Text = "📊 匯出 Excel 工作表 (*.xlsx)" };
+        excelItem.Click += async (s, e) => await OnExportExcelClickedAsync();
+        exportFlyout.Items.Add(excelItem);
+
+        var fullCsvItem = new MenuFlyoutItem { Text = "📁 匯出完整名片 CSV (*.csv)" };
+        fullCsvItem.Click += async (s, e) => await OnExportFullCsvClickedAsync();
+        exportFlyout.Items.Add(fullCsvItem);
 
         var outlookItem = new MenuFlyoutItem { Text = "📁 匯出 Outlook 聯絡人表單 (*.csv)" };
         outlookItem.Click += async (s, e) => await OnExportOutlookClickedAsync();
@@ -290,6 +300,10 @@ public sealed class SavedCardsTablePanel : UserControl
         exportFlyout.Items.Add(vcardItem);
 
         exportFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫同步 (本機檔案 / 雲端)..." };
+        dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
+        exportFlyout.Items.Add(dbSyncItem);
 
         var syncItem = new MenuFlyoutItem { Text = "☁️ 同步至 Google 聯絡人 (通訊錄)" };
         syncItem.Click += async (s, e) => await OnSyncGoogleClickedAsync();
@@ -327,11 +341,11 @@ public sealed class SavedCardsTablePanel : UserControl
 
         _exportSyncBtn = new DropDownButton
         {
-            Content = "⬇️ 匯出與同步",
+            Content = "📤 匯出/匯入與同步",
             Flyout = exportFlyout,
             VerticalAlignment = VerticalAlignment.Center
         };
-        ToolTipService.SetToolTip(_exportSyncBtn, "支援匯出 Outlook CSV、Google CSV、vCard，以及 Google 雲端備份與還原");
+        ToolTipService.SetToolTip(_exportSyncBtn, "支援 Excel (*.xlsx)、CSV 匯入與匯出，以及 Google 雲端備份與還原");
         searchGroup.Children.Add(_exportSyncBtn);
 
         Grid.SetColumn(searchGroup, 1);
@@ -1622,6 +1636,98 @@ public sealed class SavedCardsTablePanel : UserControl
         return IntPtr.Zero;
     }
 
+    private async Task OnImportExcelCsvClickedAsync()
+    {
+        try
+        {
+            var dialog = new ImportContactsDialog(
+                this.XamlRoot,
+                _excelCsvService,
+                _storageService,
+                async () =>
+                {
+                    await LoadTagChipsAsync();
+                    await LoadPageAsync(_currentPage);
+                });
+            await dialog.ShowAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("開啟匯入視窗失敗", $"發生錯誤：{ex.Message}");
+        }
+    }
+
+    private async Task OnExportExcelClickedAsync()
+    {
+        try
+        {
+            var contacts = await GetContactsForExportAsync();
+            if (contacts.Count == 0)
+            {
+                await ShowNoticeDialogAsync("尚無可匯出的名片", "目前名片清單或篩選結果中沒有任何名片資料。");
+                return;
+            }
+
+            var savePicker = new FileSavePicker();
+            IntPtr hwnd = GetParentWindowHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            }
+
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            savePicker.FileTypeChoices.Add("Excel 活頁簿 (*.xlsx)", new List<string> { ".xlsx" });
+            savePicker.SuggestedFileName = $"名片匯出_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+
+            var file = await savePicker.PickSaveFileAsync();
+            if (file == null) return;
+
+            byte[] bytes = _excelCsvService.ExportToExcel(contacts);
+            using (var stream = await file.OpenStreamForWriteAsync())
+            {
+                stream.SetLength(0);
+                await stream.WriteAsync(bytes, 0, bytes.Length);
+            }
+
+            await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {contacts.Count} 筆名片至 Excel 工作表：\n{file.Path}");
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("匯出失敗", $"發生錯誤：{ex.Message}");
+        }
+    }
+
+    private async Task OnExportFullCsvClickedAsync()
+    {
+        try
+        {
+            var contacts = await GetContactsForExportAsync();
+            if (contacts.Count == 0)
+            {
+                await ShowNoticeDialogAsync("尚無可匯出的名片", "目前名片清單或篩選結果中沒有任何名片資料。");
+                return;
+            }
+
+            string csvContent = _excelCsvService.ExportToFullCsv(contacts);
+            string defaultName = $"名片匯出_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+            string? savedPath = await _exportService.ExportToFileAsync(
+                csvContent,
+                defaultName,
+                "CSV 檔案 (*.csv)",
+                ".csv",
+                GetParentWindowHandle());
+
+            if (!string.IsNullOrEmpty(savedPath))
+            {
+                await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {contacts.Count} 筆名片至完整名片 CSV：\n{savedPath}\n\n以 Excel 開啟將自動正常顯示繁體中文。");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("匯出失敗", $"發生錯誤：{ex.Message}");
+        }
+    }
+
     private async Task OnExportOutlookClickedAsync()
     {
         try
@@ -2722,6 +2828,9 @@ public sealed class SavedCardsTablePanel : UserControl
 
     #region Public / External Access for Backup, Restore, and Export
 
+    public async Task ImportExcelCsvAsync() => await OnImportExcelCsvClickedAsync();
+    public async Task ExportExcelAsync() => await OnExportExcelClickedAsync();
+    public async Task ExportFullCsvAsync() => await OnExportFullCsvClickedAsync();
     public async Task ExportOutlookAsync() => await OnExportOutlookClickedAsync();
     public async Task ExportGoogleAsync() => await OnExportGoogleClickedAsync();
     public async Task ExportVCardAsync() => await OnExportVCardClickedAsync();

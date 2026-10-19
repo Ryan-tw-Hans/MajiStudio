@@ -1,0 +1,82 @@
+﻿{
+  "Timestamp": "2026-10-19T03:29:19.8875476Z",
+  "Version": "0.1.0-beta.35",
+  "IssueId": "ISSUE-0054",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "TotalTests": 10,
+  "PassCount": 10,
+  "FailCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "TC-0054-01",
+      "Description": "Excel (.xlsx) \u532F\u51FA\u683C\u5F0F\u8207\u5B8C\u6574\u6B04\u4F4D\u7D50\u69CB\u9A57\u8B49",
+      "Passed": true,
+      "Details": "BytesLen=5237, Rows=2, Name=\u6797\u5FD7\u5F37, Company=\u53F0\u7063\u6578\u4F4D\u79D1\u6280, Tags=\u6838\u5FC3\u5925\u4F34",
+      "LatencyMs": 627
+    },
+    {
+      "TestId": "TC-0054-02",
+      "Description": "\u901A\u7528 CSV \u532F\u51FA UTF-8 BOM \u8207\u8F49\u7FA9\u9A57\u8B49",
+      "Passed": true,
+      "Details": "HasBOM=True, HasHeader=True, HasRow1=True, HasRow2=True",
+      "LatencyMs": 1
+    },
+    {
+      "TestId": "TC-0054-03",
+      "Description": "\u6A19\u6E96 Excel / CSV \u7BC4\u672C\u751F\u6210\u8207\u7BC4\u4F8B\u8CC7\u6599\u5217\u9A57\u8B49",
+      "Passed": true,
+      "Details": "ExcelTplRows=2, CsvTplValid=True",
+      "LatencyMs": 9
+    },
+    {
+      "TestId": "TC-0054-04",
+      "Description": "\u667A\u6167\u6B04\u4F4D\u540D\u7A31\u5C0D\u9F4A\u89E3\u6790 (\u82F1\u6587/\u540C\u7FA9\u8A5E\u8868\u982D\u8B58\u5225)",
+      "Passed": true,
+      "Details": "Count=1, Name=John Doe, Company=Acme Corp, Title=CTO, Mobile=0911-222-333, Tags=Partner",
+      "LatencyMs": 29
+    },
+    {
+      "TestId": "TC-0054-05",
+      "Description": "Excel (.xlsx) \u6A94\u6848\u4E32\u6D41\u6279\u6B21\u89E3\u6790\u8349\u7A3F\u9A57\u8B49",
+      "Passed": true,
+      "Details": "DraftsCount=2, Draft1=\u738B\u5C0F\u660E, Draft2=\u674E\u5927\u83EF",
+      "LatencyMs": 7
+    },
+    {
+      "TestId": "TC-0054-06",
+      "Description": "\u901A\u7528 CSV \u6A94\u6848\u6279\u6B21\u89E3\u6790 (\u5F15\u865F\u8F49\u7FA9\u8207\u6A19\u7C64\u62C6\u5206)",
+      "Passed": true,
+      "Details": "Drafts=1, Company=\u5B8F\u9060\u5275\u65B0, \u6578\u4F4D\u90E8, TagsCount=3",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "TC-0054-07",
+      "Description": "\u91CD\u8907\u8655\u7406\u7B56\u7565\uFF1A\u8DF3\u904E\u91CD\u8907 (SkipDuplicate) \u9A57\u8B49",
+      "Passed": true,
+      "Details": "\u5171\u89E3\u6790 1 \u7B46\u8CC7\u6599\uFF1A\u65B0\u589E 0 \u7B46\u3001\u66F4\u65B0 0 \u7B46\u3001\u7565\u904E 1 \u7B46\u91CD\u8907\u540D\u7247\u3002",
+      "LatencyMs": 42
+    },
+    {
+      "TestId": "TC-0054-08",
+      "Description": "\u91CD\u8907\u8655\u7406\u7B56\u7565\uFF1A\u8986\u84CB\u66F4\u65B0 (OverwriteExisting) \u6B04\u4F4D\u8207\u6A19\u7C64\u6574\u4F75\u9A57\u8B49",
+      "Passed": true,
+      "Details": "UpdatedCount=1, Title=\u6280\u8853\u7E3D\u76E3, Email=new_ming@example.com, TagMerged=True",
+      "LatencyMs": 71
+    },
+    {
+      "TestId": "TC-0054-09",
+      "Description": "\u91CD\u8907\u8655\u7406\u7B56\u7565\uFF1A\u4E00\u5F8B\u65B0\u589E (AlwaysAdd) \u5EFA\u7ACB\u7368\u7ACB\u8A18\u9304\u9A57\u8B49",
+      "Passed": true,
+      "Details": "InsertedCount=1, TotalWithSameName=2",
+      "LatencyMs": 74
+    },
+    {
+      "TestId": "TC-0054-10",
+      "Description": "\u908A\u754C\u8207\u7570\u5E38\u9632\u8B77 (\u7A7A\u5217\u81EA\u52D5\u904E\u6FFE\u8207\u532F\u5165\u524D\u5B89\u5168\u5FEB\u7167\u751F\u6210) \u9A57\u8B49",
+      "Passed": true,
+      "Details": "EmptyDrafts=0, PreImportBackupsExists=True",
+      "LatencyMs": 2
+    }
+  ]
+}
