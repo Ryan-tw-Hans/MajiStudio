@@ -1,6 +1,6 @@
 ﻿{
-  "Timestamp": "2026-10-18T09:37:08.1935663Z",
-  "Version": "0.1.0-beta.32",
+  "Timestamp": "2026-10-19T03:25:56.1166078Z",
+  "Version": "0.1.0-beta.35",
   "IssueId": "ISSUE-0052",
   "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
   "TotalTests": 7,
@@ -13,7 +13,7 @@
       "Description": "\u6BD4\u5C0D\u5F15\u64CE\u56DB\u614B\u5206\u985E\u7CBE\u6E96\u5EA6 (OnlyLocal, OnlyRemote, Identical, Conflicted)",
       "Passed": true,
       "Details": "LocalOnly=1, RemoteOnly=1, Identical=1, Conflicted=1",
-      "LatencyMs": 340
+      "LatencyMs": 276
     },
     {
       "TestId": "TC-02",

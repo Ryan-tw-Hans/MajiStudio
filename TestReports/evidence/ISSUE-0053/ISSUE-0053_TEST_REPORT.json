@@ -1,6 +1,6 @@
 ﻿{
-  "Timestamp": "2026-10-18T13:51:42.0301376Z",
-  "Version": "0.1.0-beta.34",
+  "Timestamp": "2026-10-19T03:25:43.6614277Z",
+  "Version": "0.1.0-beta.35",
   "IssueId": "ISSUE-0053",
   "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
   "TotalTests": 7,
@@ -20,14 +20,14 @@
       "Description": "\u672C\u5730\u7AEF\u96D9 SQLite \u8CC7\u6599\u5EAB\u96D9\u5411\u6574\u4F75\u540C\u6B65",
       "Passed": true,
       "Details": "Success=True, LocalCount=4, ExternalCount=4",
-      "LatencyMs": 354
+      "LatencyMs": 315
     },
     {
       "TestId": "TC-03",
       "Description": "\u672C\u5730\u7AEF ZIP \u5099\u4EFD\u6A94\u55AE\u5411\u62C9\u53D6\u6574\u4F75 (PullToLocal)",
       "Passed": true,
       "Details": "Success=True, FinalCount=5",
-      "LatencyMs": 89
+      "LatencyMs": 106
     },
     {
       "TestId": "TC-04",
@@ -41,21 +41,21 @@
       "Description": "\u5169\u5074\u540C\u6642\u4FDD\u7559 (KeepBoth) \u526F\u672C\u6D3E\u751F\u8207\u6A19\u7C64\u9A57\u8B49",
       "Passed": true,
       "Details": "HasCloneContact=True",
-      "LatencyMs": 8
+      "LatencyMs": 6
     },
     {
       "TestId": "TC-06",
       "Description": "Google OAuth \u6191\u8B49\u5C31\u5730\u5132\u5B58\u8207\u8F09\u5165\u5F80\u8FD4\u9A57\u8B49",
       "Passed": true,
       "Details": "LoadedIdMatches=True, LoadedSecretMatches=True",
-      "LatencyMs": 115
+      "LatencyMs": 112
     },
     {
       "TestId": "TC-07",
       "Description": "\u5B89\u5168\u9632\u8B77\u5FEB\u7167\u6A5F\u5236\uFF08\u6574\u4F75\u524D\u81EA\u52D5\u5099\u4EFD\u81F3 backups/\uFF09",
       "Passed": true,
       "Details": "BackupDirExists=True, BackupFiles=1",
-      "LatencyMs": 0
+      "LatencyMs": 1
     }
   ]
 }
