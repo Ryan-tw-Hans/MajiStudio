@@ -1523,6 +1523,20 @@ public sealed partial class MainPage : Page
         await panel.ImportExcelCsvAsync();
     }
 
+    private async void OnImportEncryptedClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ImportEncryptedPackageAsync();
+    }
+
+    private async void OnExportWithDialogClicked(object sender, RoutedEventArgs e)
+    {
+        if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;
+        var panel = EnsureSavedCardsTablePanel();
+        await panel.ExportWithDialogAsync();
+    }
+
     private async void OnExportExcelClicked(object sender, RoutedEventArgs e)
     {
         if (!ViewModel.CanUseStorage || _currentActiveDialog != null || ViewModel.StorageService == null) return;

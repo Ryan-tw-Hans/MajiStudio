@@ -33,21 +33,38 @@
             <AppBarButton x:Name="SaveDraftButton" Icon="Save" Label="儲存名片" Click="OnSaveDraftClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" AutomationProperties.Name="儲存名片" />
             <AppBarButton x:Name="SavedCardsButton" Icon="Contact" Label="已存名片" Click="OnSavedCardsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" AutomationProperties.Name="已存名片清單" />
             <AppBarButton x:Name="CancelOcrButton" Icon="Cancel" Label="取消" Click="OnCancelOcrClicked" Visibility="Collapsed" AutomationProperties.Name="取消目前辨識" />
+            <AppBarSeparator />
+            <AppBarButton x:Name="CheckUpdateButton" Icon="Refresh" Label="檢查更新" Click="OnCheckUpdateClicked" AutomationProperties.Name="檢查軟體更新" />
 
             <!-- 選單項目 (整合備份、還原、匯出、管理標籤、系統設定) -->
             <CommandBar.SecondaryCommands>
                 <AppBarButton Icon="SaveLocal" Label="備份名片資料 (本機/雲端)..." Click="OnBackupClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="Download" Label="還原名片資料 (本機/雲端)..." Click="OnRestoreClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton Icon="Sync" Label="同步名片資料庫 (本機/雲端)..." Click="OnSyncDatabaseClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Sync" Label="同步至 Google 聯絡人 (通訊錄)" Click="OnSyncGoogleContactsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton x:Name="DeployVercelMenuButton" Icon="Globe" Label="📱 iOS / Web 行動版 (GitHub Pages / Vercel)..." Click="OnDeployVercelClicked" />
                 <AppBarSeparator />
-                <AppBarButton Icon="Download" Label="📥 匯入名片資料 (Excel / CSV)..." Click="OnImportExcelCsvClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="OpenFile" Label="📊 匯出至 Excel 工作表 (*.xlsx)" Click="OnExportExcelClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="OpenFile" Label="📁 匯出至完整名片 CSV (*.csv)" Click="OnExportFullCsvClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="OpenFile" Label="匯出至 Outlook CSV (*.csv)" Click="OnExportOutlookClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="OpenFile" Label="匯出至 Google 聯絡人 (*.csv)" Click="OnExportGoogleClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="Contact" Label="匯出至通用名片檔 (*.vcf)" Click="OnExportVCardClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
-                <AppBarButton Icon="Sync" Label="同步至 Google 聯絡人 (通訊錄)" Click="OnSyncGoogleContactsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
+                <AppBarButton Icon="Download" Label="📥 匯入名片資料..." IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}">
+                    <AppBarButton.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="📥 匯入名片資料 (Excel / CSV)..." Click="OnImportExcelCsvClicked" />
+                            <MenuFlyoutItem Text="🔐 讀取加密名片分享包 (*.majicard)..." Click="OnImportEncryptedClicked" />
+                        </MenuFlyout>
+                    </AppBarButton.Flyout>
+                </AppBarButton>
+                <AppBarButton Icon="OpenFile" Label="📤 匯出名片資料..." IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}">
+                    <AppBarButton.Flyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="📤 匯出名片設定 (範圍 / 排除標籤備註 / 加密)..." Click="OnExportWithDialogClicked" />
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="📊 匯出至 Excel 工作表 (*.xlsx)" Click="OnExportExcelClicked" />
+                            <MenuFlyoutItem Text="📁 匯出至完整名片 CSV (*.csv)" Click="OnExportFullCsvClicked" />
+                            <MenuFlyoutItem Text="📁 匯出至 Outlook CSV (*.csv)" Click="OnExportOutlookClicked" />
+                            <MenuFlyoutItem Text="📁 匯出至 Google 聯絡人 (*.csv)" Click="OnExportGoogleClicked" />
+                            <MenuFlyoutItem Text="📇 匯出至通用名片檔 (*.vcf)" Click="OnExportVCardClicked" />
+                        </MenuFlyout>
+                    </AppBarButton.Flyout>
+                </AppBarButton>
                 <AppBarSeparator />
                 <AppBarButton Icon="Tag" Label="管理分類標籤" Click="OnManageTagsClicked" IsEnabled="{x:Bind ViewModel.CanUseStorage, Mode=OneWay}" />
                 <AppBarButton x:Name="AddCustomFieldButton" Icon="Add" Label="新增自訂欄位" Click="OnAddCustomFieldClicked" IsEnabled="{x:Bind ViewModel.CanRunActions, Mode=OneWay}" />

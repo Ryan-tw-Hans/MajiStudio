@@ -1,7 +1,7 @@
 # MajiStudio (MajiOCR 名片辨識與跨平台通訊錄管理系統)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Latest Release](https://img.shields.io/badge/Release-v0.1.0.35-brightgreen.svg?logo=github)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
+[![Latest Release](https://img.shields.io/badge/Release-v0.1.0.36-brightgreen.svg?logo=github)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6.svg?logo=windows)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
 [![Platform: iOS / Web](https://img.shields.io/badge/Platform-iOS%2016%2B%20PWA-000000.svg?logo=apple)](https://ryan-tw-hans.github.io/MajiStudio/)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84.svg?logo=android)](https://github.com/Ryan-tw-Hans/MajiStudio)
@@ -17,7 +17,7 @@
 
 ```mermaid
 graph TD
-    subgraph Desktop ["Windows 桌面端 (MajiOCR.Windows v0.1.0.35)"]
+    subgraph Desktop ["Windows 桌面端 (MajiOCR.Windows v0.1.0.36)"]
         WinUI["WinUI 3 現代化流暢介面"]
         Tess["內嵌 Tesseract 5 離線多語 OCR 引擎"]
         SQLCipher["SQLCipher 4 AES-256 加密資料庫"]
@@ -76,6 +76,13 @@ graph TD
 * **高精度離線 OCR 辨識引擎**：
   - 內嵌 Tesseract 5 原生引擎與多國語系辨識模型（繁體中文、簡體中文、英文、日文、韓文）。
   - 具備名片智慧梯形校正、旋轉與局部框選二度辨識能力。
+* **🔐 專用離線加密名片分享包 (*.majicard) 與多選批次匯出 (v0.1.0.36 新增)**：
+  - **表格常態多選 CheckBox**：名片清單支援常態複選框與表頭一鍵全選，狀態列即時反映選取數量。
+  - **自訂匯出設定對話框**：支援自由切換「匯出所選」或「匯出全部」、自訂排除分類標籤與備註欄位。
+  - **安全分享包 (*.majicard)**：採用純本地軍規 AES-256-GCM 認證加密與 PBKDF2 (100,000 次疊代)；接收端輸入密碼解密後可預覽清單，並勾選指定名片批次匯入資料庫。
+* **⚡ 頂部檢查更新快捷按鈕與功能選單整併 (v0.1.0.36 新增)**：
+  - 主畫面頂部主要工具列直接新增「🔄 檢查更新」按鈕，一鍵即時檢查版本。
+  - 「...」功能選單將匯出與匯入整併為精簡子選單，高度縮減 30% 以上，徹底解決選單底部按鈕滾動遮蔽問題。
 * **📊 Excel / CSV 雙向批次匯入與匯出引擎 (v0.1.0.35 新增)**：
   - **標準 Excel 匯出**：一鍵輸出標準 OpenXML 活頁簿 (`*.xlsx`)，包含姓名、公司、職稱、電話、Email、地址、標籤等完整欄位。
   - **通用 CSV 匯出**：輸出帶有 UTF-8 BOM 之 CSV 檔案 (`*.csv`)，雙擊在 Microsoft Excel 開啟中文絕不亂碼。

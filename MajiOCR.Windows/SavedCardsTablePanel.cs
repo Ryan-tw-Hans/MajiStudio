@@ -39,11 +39,18 @@ public sealed class SavedCardsTablePanel : UserControl
     public event EventHandler? RequestNavigateToScan;
     public event EventHandler<ContactDetailModel>? RequestReloadContact;
 
-    private readonly double[] _colWidths = new double[] { 110, 140, 100, 120, 150, 160, 120, 90, 100 };
-    private readonly double[] _defaultColWidths = new double[] { 110, 140, 100, 120, 150, 160, 120, 90, 100 };
-    private readonly double[] _minColWidths = new double[] { 80, 100, 80, 100, 120, 100, 110, 75, 85 };
-    private readonly double[] _maxColWidths = new double[] { 280, 360, 260, 240, 360, 360, 200, 110, 120 };
-    private readonly ColumnDefinition[] _headerColDefs = new ColumnDefinition[9];
+    private readonly double[] _colWidths = new double[] { 40, 110, 140, 100, 120, 150, 160, 120, 90, 110 };
+    private readonly double[] _defaultColWidths = new double[] { 40, 110, 140, 100, 120, 150, 160, 120, 90, 110 };
+    private readonly double[] _minColWidths = new double[] { 40, 80, 100, 80, 100, 120, 100, 110, 75, 90 };
+    private readonly double[] _maxColWidths = new double[] { 40, 280, 360, 260, 240, 360, 360, 200, 110, 140 };
+    private readonly ColumnDefinition[] _headerColDefs = new ColumnDefinition[10];
+
+    // CheckBox Selection state
+    private readonly HashSet<string> _selectedContactIds = new();
+    private CheckBox _headerSelectAllChk = null!;
+    private TextBlock _selectionStatusText = null!;
+    private Button _clearSelectionBtn = null!;
+    private readonly ICardSharingCryptoService _cardSharingCryptoService;
 
     private long _pageQueryGeneration = 0;
     private long _detailQueryGeneration = 0;
@@ -144,6 +151,7 @@ public sealed class SavedCardsTablePanel : UserControl
         _settingsService = settingsService ?? new AppSettingsService();
         _databaseMergeService = new DatabaseMergeService();
         _excelCsvService = new ContactExcelCsvService();
+        _cardSharingCryptoService = new CardSharingCryptoService();
 
         BuildVisualTree();
 
@@ -205,13 +213,13 @@ public sealed class SavedCardsTablePanel : UserControl
         Grid.SetColumn(titleStack, 0);
         topBarGrid.Children.Add(titleStack);
 
-        // Search & Filters Center Group
-        var searchGroup = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
+        // Search & Filters Center Group (Compacted & prevents toolbar overlapping)
+        var searchGroup = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center };
 
         _searchBox = new TextBox
         {
             PlaceholderText = "搜尋 (支援多條件：+ 為 AND，空格為 OR，如：王曉明+台達)",
-            Width = 360,
+            Width = 260,
             VerticalAlignment = VerticalAlignment.Center
         };
         ToolTipService.SetToolTip(_searchBox, "搜尋語法說明：\n• 加號「+」代表 AND（例如「王曉明+台達」需兩者皆符合）\n• 空格代表 OR（例如「王曉明 台達」任一符合即可）\n• 支援混合搜尋（例如「王曉明+台達 研發」）\n• 亦可搜尋分類標籤名稱");
@@ -259,76 +267,100 @@ public sealed class SavedCardsTablePanel : UserControl
         _autoFitColsBtn.Click += (s, e) => AutoFitAllColumns();
         searchGroup.Children.Add(_autoFitColsBtn);
 
-        // Standalone Database Sync Button
-        var syncCenterBtn = new Button
-        {
-            Content = "🔄 資料庫同步",
-            Style = (Style)Application.Current.Resources["AccentButtonStyle"],
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        ToolTipService.SetToolTip(syncCenterBtn, "開啟名片資料庫同步中心：支援本機端雙資料庫整併與 Google Drive 雲端同步");
-        syncCenterBtn.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
-        searchGroup.Children.Add(syncCenterBtn);
+        // Consolidated Data & Sync DropDownButton
+        var dataSyncFlyout = new MenuFlyout();
 
-        // Export and Sync DropDownButton
-        var exportFlyout = new MenuFlyout();
+        // 1. 資料庫同步中心
+        var dbSyncItem = new MenuFlyoutItem { Text = "🗄️ 多裝置資料庫同步中心..." };
+        dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
+        dataSyncFlyout.Items.Add(dbSyncItem);
 
+        var syncGoogleItem = new MenuFlyoutItem { Text = "👤 同步至 Google 聯絡人 (通訊錄)" };
+        syncGoogleItem.Click += async (s, e) => await OnSyncGoogleClickedAsync();
+        dataSyncFlyout.Items.Add(syncGoogleItem);
+
+        dataSyncFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        // 2. 匯入名片
         var importItem = new MenuFlyoutItem { Text = "📥 匯入名片資料 (Excel / CSV)..." };
         importItem.Click += async (s, e) => await OnImportExcelCsvClickedAsync();
-        exportFlyout.Items.Add(importItem);
+        dataSyncFlyout.Items.Add(importItem);
 
-        exportFlyout.Items.Add(new MenuFlyoutSeparator());
+        var importEncryptedItem = new MenuFlyoutItem { Text = "🔐 讀取加密名片分享包 (*.majicard)..." };
+        importEncryptedItem.Click += async (s, e) => await OnImportEncryptedPackageClickedAsync();
+        dataSyncFlyout.Items.Add(importEncryptedItem);
+
+        dataSyncFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        // 3. 匯出設定與自訂 (支援選擇範圍、排除標籤/備註、加密等)
+        var exportConfigItem = new MenuFlyoutItem { Text = "📤 匯出名片設定 (範圍 / 排除標籤備註 / 加密)..." };
+        exportConfigItem.Click += async (s, e) => await OnExportWithDialogClickedAsync();
+        dataSyncFlyout.Items.Add(exportConfigItem);
+
+        // 4. 匯出全部名片 (子選單)
+        var exportAllSub = new MenuFlyoutSubItem { Text = "📤 匯出全部名片 (快捷匯出)" };
 
         var excelItem = new MenuFlyoutItem { Text = "📊 匯出 Excel 工作表 (*.xlsx)" };
         excelItem.Click += async (s, e) => await OnExportExcelClickedAsync();
-        exportFlyout.Items.Add(excelItem);
+        exportAllSub.Items.Add(excelItem);
 
         var fullCsvItem = new MenuFlyoutItem { Text = "📁 匯出完整名片 CSV (*.csv)" };
         fullCsvItem.Click += async (s, e) => await OnExportFullCsvClickedAsync();
-        exportFlyout.Items.Add(fullCsvItem);
+        exportAllSub.Items.Add(fullCsvItem);
 
         var outlookItem = new MenuFlyoutItem { Text = "📁 匯出 Outlook 聯絡人表單 (*.csv)" };
         outlookItem.Click += async (s, e) => await OnExportOutlookClickedAsync();
-        exportFlyout.Items.Add(outlookItem);
+        exportAllSub.Items.Add(outlookItem);
 
         var googleItem = new MenuFlyoutItem { Text = "📁 匯出 Google 聯絡人 (*.csv)" };
         googleItem.Click += async (s, e) => await OnExportGoogleClickedAsync();
-        exportFlyout.Items.Add(googleItem);
+        exportAllSub.Items.Add(googleItem);
 
         var vcardItem = new MenuFlyoutItem { Text = "📇 匯出通用名片檔 (*.vcf)" };
         vcardItem.Click += async (s, e) => await OnExportVCardClickedAsync();
-        exportFlyout.Items.Add(vcardItem);
+        exportAllSub.Items.Add(vcardItem);
 
-        exportFlyout.Items.Add(new MenuFlyoutSeparator());
+        dataSyncFlyout.Items.Add(exportAllSub);
 
-        var dbSyncItem = new MenuFlyoutItem { Text = "🔄 資料庫同步 (本機檔案 / 雲端)..." };
-        dbSyncItem.Click += async (s, e) => await OnDatabaseSyncClickedAsync();
-        exportFlyout.Items.Add(dbSyncItem);
+        // 5. 匯出所選名片 (子選單)
+        var exportSelectedSub = new MenuFlyoutSubItem { Text = "📤 匯出所選名片 (快捷匯出)" };
 
-        var syncItem = new MenuFlyoutItem { Text = "☁️ 同步至 Google 聯絡人 (通訊錄)" };
-        syncItem.Click += async (s, e) => await OnSyncGoogleClickedAsync();
-        exportFlyout.Items.Add(syncItem);
+        var excelSelectedItem = new MenuFlyoutItem { Text = "📊 匯出所選名片至 Excel (*.xlsx)" };
+        excelSelectedItem.Click += async (s, e) => await OnExportSelectedExcelClickedAsync();
+        exportSelectedSub.Items.Add(excelSelectedItem);
 
-        exportFlyout.Items.Add(new MenuFlyoutSeparator());
+        var csvSelectedItem = new MenuFlyoutItem { Text = "📁 匯出所選名片至 CSV (*.csv)" };
+        csvSelectedItem.Click += async (s, e) => await OnExportSelectedCsvClickedAsync();
+        exportSelectedSub.Items.Add(csvSelectedItem);
 
-        var backupLocalItem = new MenuFlyoutItem { Text = "💾 備份至本機 ZIP 檔案" };
-        backupLocalItem.Click += async (s, e) => await OnBackupLocalZipClickedAsync();
-        exportFlyout.Items.Add(backupLocalItem);
+        var encryptedSelectedItem = new MenuFlyoutItem { Text = "🔐 匯出所選名片為加密分享包 (*.majicard)..." };
+        encryptedSelectedItem.Click += async (s, e) => await OnExportWithDialogClickedAsync(ExportCardsScope.SelectedOnly, ExportCardsFormat.EncryptedPackage);
+        exportSelectedSub.Items.Add(encryptedSelectedItem);
 
-        var restoreLocalItem = new MenuFlyoutItem { Text = "📂 從本機 ZIP 檔案還原" };
-        restoreLocalItem.Click += async (s, e) => await OnRestoreLocalZipClickedAsync();
-        exportFlyout.Items.Add(restoreLocalItem);
+        dataSyncFlyout.Items.Add(exportSelectedSub);
 
+        dataSyncFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        // 5. 雲端與本機備份還原
         var backupDriveItem = new MenuFlyoutItem { Text = "☁️ 備份至 Google Drive (SQLite + 名片圖片)" };
         backupDriveItem.Click += async (s, e) => await OnBackupToGoogleDriveClickedAsync();
-        exportFlyout.Items.Add(backupDriveItem);
+        dataSyncFlyout.Items.Add(backupDriveItem);
 
         var restoreDriveItem = new MenuFlyoutItem { Text = "📥 從 Google Drive 還原 (版本辨識與選擇)" };
         restoreDriveItem.Click += async (s, e) => await OnRestoreFromGoogleDriveClickedAsync();
-        exportFlyout.Items.Add(restoreDriveItem);
+        dataSyncFlyout.Items.Add(restoreDriveItem);
 
-        exportFlyout.Items.Add(new MenuFlyoutSeparator());
+        var backupLocalItem = new MenuFlyoutItem { Text = "💾 備份至本機 ZIP 檔案" };
+        backupLocalItem.Click += async (s, e) => await OnBackupLocalZipClickedAsync();
+        dataSyncFlyout.Items.Add(backupLocalItem);
 
+        var restoreLocalItem = new MenuFlyoutItem { Text = "📂 從本機 ZIP 檔案還原" };
+        restoreLocalItem.Click += async (s, e) => await OnRestoreLocalZipClickedAsync();
+        dataSyncFlyout.Items.Add(restoreLocalItem);
+
+        dataSyncFlyout.Items.Add(new MenuFlyoutSeparator());
+
+        // 6. 行動版部署
         var deployVercelItem = new MenuFlyoutItem { Text = "📱 iOS / Web 行動版 (GitHub Pages / Vercel)..." };
         deployVercelItem.Click += async (s, e) =>
         {
@@ -337,15 +369,15 @@ public sealed class SavedCardsTablePanel : UserControl
                 await VercelDeployDialog.ShowAsync(this.XamlRoot, _settingsService);
             }
         };
-        exportFlyout.Items.Add(deployVercelItem);
+        dataSyncFlyout.Items.Add(deployVercelItem);
 
         _exportSyncBtn = new DropDownButton
         {
-            Content = "📤 匯出/匯入與同步",
-            Flyout = exportFlyout,
+            Content = "🔄 資料與同步",
+            Flyout = dataSyncFlyout,
             VerticalAlignment = VerticalAlignment.Center
         };
-        ToolTipService.SetToolTip(_exportSyncBtn, "支援 Excel (*.xlsx)、CSV 匯入與匯出，以及 Google 雲端備份與還原");
+        ToolTipService.SetToolTip(_exportSyncBtn, "整合多裝置資料庫同步、Google 雲端備份/還原，以及 Excel / CSV 名片匯入與匯出");
         searchGroup.Children.Add(_exportSyncBtn);
 
         Grid.SetColumn(searchGroup, 1);
@@ -429,77 +461,92 @@ public sealed class SavedCardsTablePanel : UserControl
         };
 
         var hdrGrid = new Grid { ColumnSpacing = 8 };
-        for (int i = 0; i < 9; i++)
+        for (int i = 0; i < 10; i++)
         {
             _headerColDefs[i] = new ColumnDefinition { Width = new GridLength(_colWidths[i]) };
             hdrGrid.ColumnDefinitions.Add(_headerColDefs[i]);
         }
 
-        // Header 0: 姓名 (Sortable)
+        // Header 0: CheckBox (Select All)
+        _headerSelectAllChk = new CheckBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0),
+            Padding = new Thickness(0),
+            MinWidth = 24
+        };
+        ToolTipService.SetToolTip(_headerSelectAllChk, "全選 / 取消全選本頁名片");
+        _headerSelectAllChk.Checked += OnHeaderSelectAllChecked;
+        _headerSelectAllChk.Unchecked += OnHeaderSelectAllUnchecked;
+        Grid.SetColumn(_headerSelectAllChk, 0);
+        hdrGrid.Children.Add(_headerSelectAllChk);
+
+        // Header 1: 姓名 (Sortable)
         var nameBtn = CreateSortHeaderButton("姓名", "Name", out _hdrNameSort);
-        nameBtn.DoubleTapped += (s, e) => { AutoFitColumn(0); e.Handled = true; };
+        nameBtn.DoubleTapped += (s, e) => { AutoFitColumn(1); e.Handled = true; };
         ToolTipService.SetToolTip(nameBtn, "點擊切換排序，雙擊自動調整欄寬");
-        Grid.SetColumn(nameBtn, 0);
+        Grid.SetColumn(nameBtn, 1);
         hdrGrid.Children.Add(nameBtn);
 
-        // Header 1: 公司 (Sortable)
+        // Header 2: 公司 (Sortable)
         var compBtn = CreateSortHeaderButton("公司", "Company", out _hdrCompanySort);
-        compBtn.DoubleTapped += (s, e) => { AutoFitColumn(1); e.Handled = true; };
+        compBtn.DoubleTapped += (s, e) => { AutoFitColumn(2); e.Handled = true; };
         ToolTipService.SetToolTip(compBtn, "點擊切換排序，雙擊自動調整欄寬");
-        Grid.SetColumn(compBtn, 1);
+        Grid.SetColumn(compBtn, 2);
         hdrGrid.Children.Add(compBtn);
 
-        // Header 2: 職稱 (Sortable)
+        // Header 3: 職稱 (Sortable)
         var titleBtn = CreateSortHeaderButton("職稱", "Title", out _hdrTitleSort);
-        titleBtn.DoubleTapped += (s, e) => { AutoFitColumn(2); e.Handled = true; };
+        titleBtn.DoubleTapped += (s, e) => { AutoFitColumn(3); e.Handled = true; };
         ToolTipService.SetToolTip(titleBtn, "點擊切換排序，雙擊自動調整欄寬");
-        Grid.SetColumn(titleBtn, 2);
+        Grid.SetColumn(titleBtn, 3);
         hdrGrid.Children.Add(titleBtn);
 
-        // Header 3: 電話
+        // Header 4: 電話
         var phoneHdr = new TextBlock { Text = "電話", FontWeight = FontWeights.SemiBold, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        phoneHdr.DoubleTapped += (s, e) => { AutoFitColumn(3); e.Handled = true; };
+        phoneHdr.DoubleTapped += (s, e) => { AutoFitColumn(4); e.Handled = true; };
         ToolTipService.SetToolTip(phoneHdr, "雙擊自動調整欄寬");
-        Grid.SetColumn(phoneHdr, 3);
+        Grid.SetColumn(phoneHdr, 4);
         hdrGrid.Children.Add(phoneHdr);
 
-        // Header 4: Email
+        // Header 5: Email
         var emailHdr = new TextBlock { Text = "Email", FontWeight = FontWeights.SemiBold, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        emailHdr.DoubleTapped += (s, e) => { AutoFitColumn(4); e.Handled = true; };
+        emailHdr.DoubleTapped += (s, e) => { AutoFitColumn(5); e.Handled = true; };
         ToolTipService.SetToolTip(emailHdr, "雙擊自動調整欄寬");
-        Grid.SetColumn(emailHdr, 4);
+        Grid.SetColumn(emailHdr, 5);
         hdrGrid.Children.Add(emailHdr);
 
-        // Header 5: 分類標籤
+        // Header 6: 分類標籤
         var tagHdr = new TextBlock { Text = "分類標籤", FontWeight = FontWeights.SemiBold, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };
-        tagHdr.DoubleTapped += (s, e) => { AutoFitColumn(5); e.Handled = true; };
+        tagHdr.DoubleTapped += (s, e) => { AutoFitColumn(6); e.Handled = true; };
         ToolTipService.SetToolTip(tagHdr, "雙擊自動調整欄寬");
-        Grid.SetColumn(tagHdr, 5);
+        Grid.SetColumn(tagHdr, 6);
         hdrGrid.Children.Add(tagHdr);
 
-        // Header 6: 儲存時間 (Sortable)
+        // Header 7: 儲存時間 (Sortable)
         var timeBtn = CreateSortHeaderButton("儲存時間", "CreatedAt", out _hdrTimeSort);
-        timeBtn.DoubleTapped += (s, e) => { AutoFitColumn(6); e.Handled = true; };
+        timeBtn.DoubleTapped += (s, e) => { AutoFitColumn(7); e.Handled = true; };
         ToolTipService.SetToolTip(timeBtn, "點擊切換排序，雙擊自動調整欄寬");
-        Grid.SetColumn(timeBtn, 6);
+        Grid.SetColumn(timeBtn, 7);
         hdrGrid.Children.Add(timeBtn);
 
-        // Header 7: 名片圖檔
+        // Header 8: 名片圖檔
         var imgHdr = new TextBlock { Text = "名片圖檔", FontWeight = FontWeights.SemiBold, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        imgHdr.DoubleTapped += (s, e) => { AutoFitColumn(7); e.Handled = true; };
+        imgHdr.DoubleTapped += (s, e) => { AutoFitColumn(8); e.Handled = true; };
         ToolTipService.SetToolTip(imgHdr, "雙擊自動調整欄寬");
-        Grid.SetColumn(imgHdr, 7);
+        Grid.SetColumn(imgHdr, 8);
         hdrGrid.Children.Add(imgHdr);
 
-        // Header 8: 操作
+        // Header 9: 操作
         var actionHdr = new TextBlock { Text = "操作", FontWeight = FontWeights.SemiBold, FontSize = 12, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        actionHdr.DoubleTapped += (s, e) => { AutoFitColumn(8); e.Handled = true; };
+        actionHdr.DoubleTapped += (s, e) => { AutoFitColumn(9); e.Handled = true; };
         ToolTipService.SetToolTip(actionHdr, "雙擊自動調整欄寬");
-        Grid.SetColumn(actionHdr, 8);
+        Grid.SetColumn(actionHdr, 9);
         hdrGrid.Children.Add(actionHdr);
 
-        // Column Resizers between columns 0..7
-        for (int i = 0; i < 8; i++)
+        // Column Resizers between columns 1..8
+        for (int i = 1; i < 9; i++)
         {
             var resizer = CreateColumnResizer(i);
             Grid.SetColumn(resizer, i);
@@ -799,17 +846,40 @@ public sealed class SavedCardsTablePanel : UserControl
         Grid.SetColumn(pageStack, 0);
         footerGrid.Children.Add(pageStack);
 
-        // Center Count Summary
+        // Center Count Summary & Selection Status
+        var centerSummaryStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+
         _summaryCountText = new TextBlock
         {
             Text = "共 0 筆名片",
             FontSize = 12,
             Opacity = 0.7,
-            HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
-        Grid.SetColumn(_summaryCountText, 1);
-        footerGrid.Children.Add(_summaryCountText);
+        centerSummaryStack.Children.Add(_summaryCountText);
+
+        _selectionStatusText = new TextBlock
+        {
+            Text = "",
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)Application.Current.Resources["AccentTextFillColorPrimaryBrush"],
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        centerSummaryStack.Children.Add(_selectionStatusText);
+
+        _clearSelectionBtn = new Button
+        {
+            Content = "清除勾選",
+            FontSize = 11,
+            Padding = new Thickness(6, 2, 6, 2),
+            Visibility = Visibility.Collapsed
+        };
+        _clearSelectionBtn.Click += (s, e) => ClearAllSelections();
+        centerSummaryStack.Children.Add(_clearSelectionBtn);
+
+        Grid.SetColumn(centerSummaryStack, 1);
+        footerGrid.Children.Add(centerSummaryStack);
 
         // Right Settings: Page Size & Drawer Toggle
         var rightStack = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
@@ -918,16 +988,18 @@ public sealed class SavedCardsTablePanel : UserControl
                         <ColumnDefinition Width='{_colWidths[6]}' />
                         <ColumnDefinition Width='{_colWidths[7]}' />
                         <ColumnDefinition Width='{_colWidths[8]}' />
+                        <ColumnDefinition Width='{_colWidths[9]}' />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column='0' Text='{{Binding DisplayTitle}}' ToolTipService.ToolTip='{{Binding DisplayTitle}}' FontWeight='SemiBold' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='1' Text='{{Binding DisplaySubtitle}}' ToolTipService.ToolTip='{{Binding DisplaySubtitle}}' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='2' Text='{{Binding Title}}' ToolTipService.ToolTip='{{Binding Title}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='3' Text='{{Binding Phone}}' ToolTipService.ToolTip='{{Binding Phone}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='4' Text='{{Binding Email}}' ToolTipService.ToolTip='{{Binding Email}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='5' Text='{{Binding DisplayTags}}' ToolTipService.ToolTip='{{Binding DisplayTags}}' FontSize='11' Opacity='0.8' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='6' Text='{{Binding DisplayTime}}' ToolTipService.ToolTip='{{Binding DisplayTime}}' FontSize='11' Opacity='0.6' VerticalAlignment='Center' />
-                    <TextBlock Grid.Column='7' Text='{{Binding HasImage}}' ToolTipService.ToolTip='名片圖檔狀態' VerticalAlignment='Center' HorizontalAlignment='Center' />
-                    <TextBlock Grid.Column='8' Text='檢視/編輯' ToolTipService.ToolTip='雙擊名片列或點選右側明細「載回主畫面編輯」' VerticalAlignment='Center' HorizontalAlignment='Center' Opacity='0.75' FontSize='11' />
+                    <CheckBox Grid.Column='0' IsChecked='{{Binding IsSelected, Mode=TwoWay}}' HorizontalAlignment='Center' VerticalAlignment='Center' Margin='0' Padding='0' MinWidth='24' />
+                    <TextBlock Grid.Column='1' Text='{{Binding DisplayTitle}}' ToolTipService.ToolTip='{{Binding DisplayTitle}}' FontWeight='SemiBold' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='2' Text='{{Binding DisplaySubtitle}}' ToolTipService.ToolTip='{{Binding DisplaySubtitle}}' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='3' Text='{{Binding Title}}' ToolTipService.ToolTip='{{Binding Title}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='4' Text='{{Binding Phone}}' ToolTipService.ToolTip='{{Binding Phone}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='5' Text='{{Binding Email}}' ToolTipService.ToolTip='{{Binding Email}}' Opacity='0.85' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='6' Text='{{Binding DisplayTags}}' ToolTipService.ToolTip='{{Binding DisplayTags}}' FontSize='11' Opacity='0.8' TextTrimming='CharacterEllipsis' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='7' Text='{{Binding DisplayTime}}' ToolTipService.ToolTip='{{Binding DisplayTime}}' FontSize='11' Opacity='0.6' VerticalAlignment='Center' />
+                    <TextBlock Grid.Column='8' Text='{{Binding HasImage}}' ToolTipService.ToolTip='名片圖檔狀態' VerticalAlignment='Center' HorizontalAlignment='Center' />
+                    <TextBlock Grid.Column='9' Text='檢視/編輯' ToolTipService.ToolTip='雙擊名片列或點選右側明細「載回主畫面編輯」' VerticalAlignment='Center' HorizontalAlignment='Center' Opacity='0.75' FontSize='11' />
                 </Grid>
             </DataTemplate>";
         return (DataTemplate)XamlReader.Load(xaml);
@@ -1045,25 +1117,25 @@ public sealed class SavedCardsTablePanel : UserControl
 
     private double CalculateAutoFitWidth(int colIndex)
     {
-        if (colIndex < 0 || colIndex >= 9) return 100;
+        if (colIndex <= 0 || colIndex >= 10) return 40;
 
         double maxWidth = 0;
 
         // 1. Header Text Width
         string headerText = colIndex switch
         {
-            0 => "姓名",
-            1 => "公司",
-            2 => "職稱",
-            3 => "電話",
-            4 => "Email",
-            5 => "分類標籤",
-            6 => "儲存時間",
-            7 => "名片圖檔",
-            8 => "操作",
+            1 => "姓名",
+            2 => "公司",
+            3 => "職稱",
+            4 => "電話",
+            5 => "Email",
+            6 => "分類標籤",
+            7 => "儲存時間",
+            8 => "名片圖檔",
+            9 => "操作",
             _ => ""
         };
-        bool isSortable = (colIndex == 0 || colIndex == 1 || colIndex == 2 || colIndex == 6);
+        bool isSortable = (colIndex == 1 || colIndex == 2 || colIndex == 3 || colIndex == 7);
         double headerWidth = MeasureStringWidth(headerText, 12, true) + (isSortable ? 24 : 0);
         maxWidth = Math.Max(maxWidth, headerWidth);
 
@@ -1075,39 +1147,39 @@ public sealed class SavedCardsTablePanel : UserControl
                 double w = 0;
                 switch (colIndex)
                 {
-                    case 0:
+                    case 1:
                         w = MeasureStringWidth(item.DisplayTitle, 12, true);
                         break;
-                    case 1:
+                    case 2:
                         w = MeasureStringWidth(item.DisplaySubtitle, 12, false);
                         break;
-                    case 2:
+                    case 3:
                         w = MeasureStringWidth(item.Title, 12, false);
                         break;
-                    case 3:
+                    case 4:
                         w = MeasureStringWidth(item.Phone, 12, false);
                         break;
-                    case 4:
+                    case 5:
                         w = MeasureStringWidth(item.Email, 12, false);
                         break;
-                    case 5:
+                    case 6:
                         w = MeasureStringWidth(item.DisplayTags, 11, false);
                         break;
-                    case 6:
+                    case 7:
                         w = MeasureStringWidth(item.DisplayTime, 11, false);
                         break;
-                    case 7:
-                        w = 60;
-                        break;
                     case 8:
-                        w = 70;
+                        w = 80;
+                        break;
+                    case 9:
+                        w = 95;
                         break;
                 }
                 maxWidth = Math.Max(maxWidth, w);
             }
         }
 
-        // 3. Extra padding for cell margin and aesthetics (left/right padding 8px + splitter margin + safe space)
+        // 3. Extra padding for cell margin and aesthetics
         double targetWidth = maxWidth + 28;
 
         // 4. Clamping
@@ -1119,7 +1191,7 @@ public sealed class SavedCardsTablePanel : UserControl
 
     public void AutoFitColumn(int colIndex)
     {
-        if (colIndex < 0 || colIndex >= 9) return;
+        if (colIndex <= 0 || colIndex >= 10) return;
 
         double fitWidth = CalculateAutoFitWidth(colIndex);
         _colWidths[colIndex] = fitWidth;
@@ -1129,7 +1201,9 @@ public sealed class SavedCardsTablePanel : UserControl
 
     public void AutoFitAllColumns()
     {
-        for (int i = 0; i < 9; i++)
+        _colWidths[0] = 40;
+        _headerColDefs[0].Width = new GridLength(40);
+        for (int i = 1; i < 10; i++)
         {
             double fitWidth = CalculateAutoFitWidth(i);
             _colWidths[i] = fitWidth;
@@ -1242,6 +1316,22 @@ public sealed class SavedCardsTablePanel : UserControl
                 return;
             }
 
+            foreach (var item in paged.Items)
+            {
+                item.IsSelected = _selectedContactIds.Contains(item.ContactId);
+                item.PropertyChanged += (s, e) =>
+                {
+                    if (e.PropertyName == nameof(ContactSummaryItem.IsSelected))
+                    {
+                        if (item.IsSelected)
+                            _selectedContactIds.Add(item.ContactId);
+                        else
+                            _selectedContactIds.Remove(item.ContactId);
+                        UpdateSelectionStatus();
+                    }
+                };
+            }
+
             _tableListView.ItemsSource = paged.Items;
 
             if (paged.TotalCount == 0)
@@ -1258,6 +1348,7 @@ public sealed class SavedCardsTablePanel : UserControl
                 ? $"第 {_currentPage + 1} / {_totalPages} 頁"
                 : "第 1 頁";
             _summaryCountText.Text = $"共 {paged.TotalCount} 筆名片 (每頁 {_pageSize} 筆)";
+            UpdateSelectionStatus();
 
             _firstPageBtn.IsEnabled = paged.HasPreviousPage;
             _prevPageBtn.IsEnabled = paged.HasPreviousPage;
@@ -1654,6 +1745,291 @@ public sealed class SavedCardsTablePanel : UserControl
         catch (Exception ex)
         {
             await ShowNoticeDialogAsync("開啟匯入視窗失敗", $"發生錯誤：{ex.Message}");
+        }
+    }
+
+    private void OnHeaderSelectAllChecked(object sender, RoutedEventArgs e)
+    {
+        if (_tableListView.ItemsSource is IEnumerable<ContactSummaryItem> items)
+        {
+            foreach (var item in items)
+            {
+                item.IsSelected = true;
+                _selectedContactIds.Add(item.ContactId);
+            }
+            UpdateSelectionStatus();
+        }
+    }
+
+    private void OnHeaderSelectAllUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (_tableListView.ItemsSource is IEnumerable<ContactSummaryItem> items)
+        {
+            foreach (var item in items)
+            {
+                item.IsSelected = false;
+                _selectedContactIds.Remove(item.ContactId);
+            }
+            UpdateSelectionStatus();
+        }
+    }
+
+    private void ClearAllSelections()
+    {
+        _selectedContactIds.Clear();
+        if (_tableListView.ItemsSource is IEnumerable<ContactSummaryItem> items)
+        {
+            foreach (var item in items)
+            {
+                item.IsSelected = false;
+            }
+        }
+        UpdateSelectionStatus();
+    }
+
+    private void UpdateSelectionStatus()
+    {
+        int count = _selectedContactIds.Count;
+        if (count > 0)
+        {
+            _selectionStatusText.Text = $"☑️ 已勾選 {count} 筆";
+            _clearSelectionBtn.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            _selectionStatusText.Text = string.Empty;
+            _clearSelectionBtn.Visibility = Visibility.Collapsed;
+        }
+
+        if (_tableListView.ItemsSource is IEnumerable<ContactSummaryItem> items)
+        {
+            var list = items.ToList();
+            if (list.Count > 0)
+            {
+                bool allChecked = list.All(x => x.IsSelected);
+                bool anyChecked = list.Any(x => x.IsSelected);
+                _headerSelectAllChk.Checked -= OnHeaderSelectAllChecked;
+                _headerSelectAllChk.Unchecked -= OnHeaderSelectAllUnchecked;
+                _headerSelectAllChk.IsChecked = allChecked ? true : (anyChecked ? null : false);
+                _headerSelectAllChk.Checked += OnHeaderSelectAllChecked;
+                _headerSelectAllChk.Unchecked += OnHeaderSelectAllUnchecked;
+            }
+        }
+    }
+
+    public async Task OnExportWithDialogClickedAsync(ExportCardsScope? defaultScope = null, ExportCardsFormat defaultFormat = ExportCardsFormat.Excel)
+    {
+        try
+        {
+            int selectedCount = _selectedContactIds.Count;
+            if (selectedCount == 0 && _currentDetail != null)
+            {
+                selectedCount = 1;
+            }
+
+            var allFiltered = await GetContactsForExportAsync();
+            int totalFiltered = allFiltered.Count;
+
+            if (totalFiltered == 0 && selectedCount == 0)
+            {
+                await ShowNoticeDialogAsync("尚無名片資料", "目前名單中沒有任何名片可供匯出。");
+                return;
+            }
+
+            var dialog = new ExportCardsDialog(this.XamlRoot, selectedCount, totalFiltered, defaultFormat);
+            var options = await dialog.ShowAsync();
+            if (options == null || !options.IsConfirmed) return;
+
+            // Gather contacts
+            List<ContactDetailModel> exportContacts;
+            if (options.Scope == ExportCardsScope.SelectedOnly)
+            {
+                exportContacts = new List<ContactDetailModel>();
+                if (_selectedContactIds.Count > 0)
+                {
+                    foreach (var id in _selectedContactIds)
+                    {
+                        var d = await _storageService.GetContactDetailAsync(id);
+                        if (d != null) exportContacts.Add(d);
+                    }
+                }
+                else if (_currentDetail != null)
+                {
+                    exportContacts.Add(_currentDetail);
+                }
+
+                if (exportContacts.Count == 0)
+                {
+                    await ShowNoticeDialogAsync("未勾選名片", "尚未勾選任何名片。");
+                    return;
+                }
+            }
+            else
+            {
+                exportContacts = allFiltered.ToList();
+            }
+
+            var savePicker = new FileSavePicker();
+            IntPtr hwnd = GetParentWindowHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            }
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
+
+            if (options.Format == ExportCardsFormat.Excel)
+            {
+                savePicker.FileTypeChoices.Add("Excel 工作表 (*.xlsx)", new List<string> { ".xlsx" });
+                savePicker.SuggestedFileName = $"名片匯出_{timestamp}.xlsx";
+                var file = await savePicker.PickSaveFileAsync();
+                if (file == null) return;
+
+                byte[] bytes = _excelCsvService.ExportToExcel(exportContacts, options.IncludeTags, options.IncludeNotes);
+                await FileIO.WriteBytesAsync(file, bytes);
+                await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {exportContacts.Count} 筆名片至 Excel：\n{file.Path}");
+            }
+            else if (options.Format == ExportCardsFormat.Csv)
+            {
+                savePicker.FileTypeChoices.Add("CSV 檔案 (*.csv)", new List<string> { ".csv" });
+                savePicker.SuggestedFileName = $"名片匯出_{timestamp}.csv";
+                var file = await savePicker.PickSaveFileAsync();
+                if (file == null) return;
+
+                string csvContent = _excelCsvService.ExportToFullCsv(exportContacts, options.IncludeTags, options.IncludeNotes);
+                await FileIO.WriteTextAsync(file, csvContent);
+                await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {exportContacts.Count} 筆名片至 CSV：\n{file.Path}");
+            }
+            else if (options.Format == ExportCardsFormat.EncryptedPackage)
+            {
+                savePicker.FileTypeChoices.Add("MajiOCR 加密名片分享包 (*.majicard)", new List<string> { ".majicard" });
+                savePicker.SuggestedFileName = $"名片分享包_{timestamp}.majicard";
+                var file = await savePicker.PickSaveFileAsync();
+                if (file == null) return;
+
+                byte[] pkgBytes = _cardSharingCryptoService.CreateEncryptedPackage(
+                    exportContacts,
+                    options.Password,
+                    options.IncludeTags,
+                    options.IncludeNotes,
+                    includeImages: true);
+
+                await FileIO.WriteBytesAsync(file, pkgBytes);
+                await ShowNoticeDialogAsync("加密分享包建立成功", $"已成功匯出 {exportContacts.Count} 筆加密名片分享包：\n{file.Path}\n\n請妥善保管並將保護密碼告知接收者。");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("匯出失敗", $"執行匯出時發生錯誤：{ex.Message}");
+        }
+    }
+
+    private async Task OnImportEncryptedPackageClickedAsync()
+    {
+        try
+        {
+            var dialog = new ImportEncryptedCardsDialog(
+                this.XamlRoot,
+                _cardSharingCryptoService,
+                _excelCsvService,
+                _storageService,
+                async () => await RefreshDataAsync());
+            await dialog.ShowAsync(GetParentWindowHandle());
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("讀取加密分享包失敗", $"發生錯誤：{ex.Message}");
+        }
+    }
+
+    private async Task<List<ContactDetailModel>> GetSelectedContactsForExportAsync()
+    {
+        var list = new List<ContactDetailModel>();
+        if (_selectedContactIds.Count > 0)
+        {
+            foreach (var id in _selectedContactIds)
+            {
+                var d = await _storageService.GetContactDetailAsync(id);
+                if (d != null) list.Add(d);
+            }
+        }
+        else if (_currentDetail != null)
+        {
+            list.Add(_currentDetail);
+        }
+        return list;
+    }
+
+    private async Task OnExportSelectedExcelClickedAsync()
+    {
+        try
+        {
+            var contacts = await GetSelectedContactsForExportAsync();
+            if (contacts.Count == 0)
+            {
+                await ShowNoticeDialogAsync("未選取任何名片", "請先點選列表中要匯出的名片，後續版本亦將支援勾選多張名片批量匯出。");
+                return;
+            }
+
+            var savePicker = new FileSavePicker();
+            IntPtr hwnd = GetParentWindowHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            }
+
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            savePicker.FileTypeChoices.Add("Excel 工作表 (*.xlsx)", new List<string> { ".xlsx" });
+            savePicker.SuggestedFileName = $"所選名片匯出_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+
+            var file = await savePicker.PickSaveFileAsync();
+            if (file == null) return;
+
+            byte[] bytes = _excelCsvService.ExportToExcel(contacts);
+            await FileIO.WriteBytesAsync(file, bytes);
+
+            await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {contacts.Count} 筆所選名片至 Excel：\n{file.Path}");
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("匯出失敗", $"匯出所選名片時發生錯誤：{ex.Message}");
+        }
+    }
+
+    private async Task OnExportSelectedCsvClickedAsync()
+    {
+        try
+        {
+            var contacts = await GetSelectedContactsForExportAsync();
+            if (contacts.Count == 0)
+            {
+                await ShowNoticeDialogAsync("未選取任何名片", "請先點選列表中要匯出的名片，後續版本亦將支援勾選多張名片批量匯出。");
+                return;
+            }
+
+            var savePicker = new FileSavePicker();
+            IntPtr hwnd = GetParentWindowHandle();
+            if (hwnd != IntPtr.Zero)
+            {
+                WinRT.Interop.InitializeWithWindow.Initialize(savePicker, hwnd);
+            }
+
+            savePicker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
+            savePicker.FileTypeChoices.Add("CSV 檔案 (*.csv)", new List<string> { ".csv" });
+            savePicker.SuggestedFileName = $"所選名片匯出_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+
+            var file = await savePicker.PickSaveFileAsync();
+            if (file == null) return;
+
+            string csvContent = _excelCsvService.ExportToFullCsv(contacts);
+            await FileIO.WriteTextAsync(file, csvContent);
+
+            await ShowNoticeDialogAsync("匯出成功", $"已成功匯出 {contacts.Count} 筆所選名片至 CSV：\n{file.Path}");
+        }
+        catch (Exception ex)
+        {
+            await ShowNoticeDialogAsync("匯出失敗", $"匯出所選名片時發生錯誤：{ex.Message}");
         }
     }
 
@@ -2829,6 +3205,8 @@ public sealed class SavedCardsTablePanel : UserControl
     #region Public / External Access for Backup, Restore, and Export
 
     public async Task ImportExcelCsvAsync() => await OnImportExcelCsvClickedAsync();
+    public async Task ImportEncryptedPackageAsync() => await OnImportEncryptedPackageClickedAsync();
+    public async Task ExportWithDialogAsync() => await OnExportWithDialogClickedAsync();
     public async Task ExportExcelAsync() => await OnExportExcelClickedAsync();
     public async Task ExportFullCsvAsync() => await OnExportFullCsvClickedAsync();
     public async Task ExportOutlookAsync() => await OnExportOutlookClickedAsync();
