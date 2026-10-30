@@ -28,13 +28,13 @@
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
 
     <!-- Candidate Version -->
-    <Version>0.1.0-beta.36</Version>
-    <AssemblyVersion>0.1.0.36</AssemblyVersion>
-    <FileVersion>0.1.0.36</FileVersion>
-    <InformationalVersion>0.1.0-beta.36</InformationalVersion>
+    <Version>0.1.0-beta.37</Version>
+    <AssemblyVersion>0.1.0.37</AssemblyVersion>
+    <FileVersion>0.1.0.37</FileVersion>
+    <InformationalVersion>0.1.0-beta.37</InformationalVersion>
     <Product>MajiOCR.Windows</Product>
     <Company>MajiOCR</Company>
-    <Description>Windows 原生離線名片辨識與固定欄位管理 (0.1.0-beta.36 支援名片多選、加密分享包、更新快捷鍵與選單整併)</Description>
+    <Description>Windows 原生離線名片辨識與固定欄位管理 (0.1.0-beta.37 修復單值衝突、待分類防隱形展示與新名片工作階段重置)</Description>
   </PropertyGroup>
 
   <ItemGroup>
