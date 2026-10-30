@@ -813,6 +813,29 @@ public partial class MainViewModel : INotifyPropertyChanged
 
         // Unclassified rows (待分類)
         var activeUnclass = DraftRows.Where(r => r.ValueKind == CanonicalValueKind.Unclassified).ToList();
+
+        // 兜底防護：若任何單值種類存在超過 1 筆非空項目，超出第一筆的衝突項目自動納入待分類列表中展示，確保 UI 100% 可視可調，絕不隱形！
+        var singleKinds = new[]
+        {
+            CanonicalValueKind.Name,
+            CanonicalValueKind.Company,
+            CanonicalValueKind.Title,
+            CanonicalValueKind.Website,
+            CanonicalValueKind.Address,
+            CanonicalValueKind.Note
+        };
+        foreach (var kind in singleKinds)
+        {
+            var extraRows = DraftRows.Where(r => r.ValueKind == kind && !string.IsNullOrWhiteSpace(r.Value)).Skip(1);
+            foreach (var extra in extraRows)
+            {
+                if (!activeUnclass.Contains(extra))
+                {
+                    activeUnclass.Add(extra);
+                }
+            }
+        }
+
         UnclassifiedRows.Clear();
         foreach (var u in activeUnclass) UnclassifiedRows.Add(u);
 
@@ -1567,9 +1590,22 @@ public partial class MainViewModel : INotifyPropertyChanged
         {
             // Region OCR (when not specifically targeted)
             int insertIndex = 0;
+            var existingSingleKinds = new HashSet<string>(
+                DraftRows.Where(r => CanonicalValueKind.IsSingleValueKind(r.ValueKind) && !string.IsNullOrWhiteSpace(r.Value))
+                         .Select(r => r.ValueKind));
+
             foreach (var cand in candidates)
             {
                 string suggestedKind = FieldSuggester.Suggest(cand.Text);
+                if (CanonicalValueKind.IsSingleValueKind(suggestedKind) && existingSingleKinds.Contains(suggestedKind))
+                {
+                    suggestedKind = CanonicalValueKind.Unclassified;
+                }
+                else if (CanonicalValueKind.IsSingleValueKind(suggestedKind))
+                {
+                    existingSingleKinds.Add(suggestedKind);
+                }
+
                 var row = new DraftRowItem
                 {
                     Id = Guid.NewGuid().ToString("N"),
@@ -1857,7 +1893,7 @@ public partial class MainViewModel : INotifyPropertyChanged
         if (!CanonicalValueKind.IsSingleValueKind(targetKind)) return null;
 
         return DraftRows.FirstOrDefault(r => r != row &&
-                                             r.Status == DraftItemStatus.Confirmed &&
+                                             !string.IsNullOrWhiteSpace(r.Value) &&
                                              r.ValueKind == targetKind);
     }
 

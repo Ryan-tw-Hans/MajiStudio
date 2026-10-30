@@ -37,6 +37,7 @@ public sealed class SavedCardsTablePanel : UserControl
     private readonly IContactExcelCsvService _excelCsvService;
     public event EventHandler<string>? ActiveContactDeleted;
     public event EventHandler? RequestNavigateToScan;
+    public event EventHandler? RequestNewScan;
     public event EventHandler<ContactDetailModel>? RequestReloadContact;
 
     private readonly double[] _colWidths = new double[] { 40, 110, 140, 100, 120, 150, 160, 120, 90, 110 };
@@ -392,7 +393,7 @@ public sealed class SavedCardsTablePanel : UserControl
             Style = (Style)Application.Current.Resources["AccentButtonStyle"],
             VerticalAlignment = VerticalAlignment.Center
         };
-        _newScanBtn.Click += (s, e) => RequestNavigateToScan?.Invoke(this, EventArgs.Empty);
+        _newScanBtn.Click += (s, e) => RequestNewScan?.Invoke(this, EventArgs.Empty);
         navStack.Children.Add(_newScanBtn);
 
         _backToScanBtn = new Button { Content = "🔙 返回掃描頁", VerticalAlignment = VerticalAlignment.Center };

@@ -810,7 +810,10 @@ public sealed partial class MainPage : Page
         if (_currentActiveDialog != null) return;
         ViewModel.ConfirmAllDraftRows(out string? error);
         if (error != null)
-            await ShowErrorDialogAsync("全部欄位確認", error);
+        {
+            UnclassifiedExpander.IsExpanded = true;
+            await ShowErrorDialogAsync("全部欄位確認", $"{error}\n\n已為您自動展開下方「待分類」區塊，請於待分類中調整衝突項目的類別，或點擊「✕」刪除重複項目。");
+        }
         UpdateDraftStatusUI();
     }
 
@@ -833,7 +836,22 @@ public sealed partial class MainPage : Page
             if (resolution == "Cancel") return;
             if (resolution == "Replace")
             {
+                conflictRow.ValueKind = CanonicalValueKind.Unclassified;
+                conflictRow.CustomFieldDefinitionId = null;
+                conflictRow.CustomFieldNameSnapshot = null;
+                conflictRow.SyncOptions(ViewModel.CatalogService.GetActiveDefinitions(), DraftFieldOption.CreateAction("+ 新增自訂名稱…"));
                 conflictRow.Unconfirm();
+                conflictRow.MarkModified();
+            }
+            else if (resolution == "CustomField" || resolution == "KeepBoth")
+            {
+                string defaultCustomName = $"{kindName}_備用";
+                var newDef = ViewModel.CatalogService.AddDefinition(defaultCustomName);
+                ViewModel.RefreshFieldOptions();
+                conflictRow.ValueKind = CanonicalValueKind.Custom;
+                conflictRow.CustomFieldDefinitionId = newDef.Id;
+                conflictRow.CustomFieldNameSnapshot = newDef.Name;
+                conflictRow.SyncOptions(ViewModel.CatalogService.GetActiveDefinitions(), DraftFieldOption.CreateAction("+ 新增自訂名稱…"));
                 conflictRow.MarkModified();
             }
         }
@@ -917,8 +935,44 @@ public sealed partial class MainPage : Page
             }
             else if (resolution == "Replace")
             {
+                // 將被替換的舊列轉回待分類，避免產生雙重單值幽靈衝突
+                conflictRow.ValueKind = CanonicalValueKind.Unclassified;
+                conflictRow.CustomFieldDefinitionId = null;
+                conflictRow.CustomFieldNameSnapshot = null;
+                conflictRow.SyncOptions(ViewModel.CatalogService.GetActiveDefinitions(), DraftFieldOption.CreateAction("+ 新增自訂名稱…"));
                 conflictRow.Unconfirm();
                 conflictRow.MarkModified();
+            }
+            else if (resolution == "CustomField" || resolution == "KeepBoth")
+            {
+                // 單值欄位不允許兩筆相同單值；轉為自訂名稱欄位以合法保留兩筆
+                string defaultCustomName = $"{kindName}_備用";
+                string? newName = await ShowTextInputDialogAsync("新增自訂名稱以保留兩筆", $"單值欄位【{kindName}】不可重複，請輸入保留此內容的自訂欄位名稱：");
+                if (string.IsNullOrWhiteSpace(newName))
+                {
+                    newName = defaultCustomName;
+                }
+
+                if (!CustomFieldCatalogService.ValidateName(newName, out var sanitizedName, out _))
+                {
+                    sanitizedName = defaultCustomName;
+                }
+
+                var newDef = ViewModel.CatalogService.AddDefinition(sanitizedName);
+                ViewModel.RefreshFieldOptions();
+                row.ValueKind = CanonicalValueKind.Custom;
+                row.CustomFieldDefinitionId = newDef.Id;
+                row.CustomFieldNameSnapshot = newDef.Name;
+                row.SyncOptions(ViewModel.CatalogService.GetActiveDefinitions(), DraftFieldOption.CreateAction("+ 新增自訂名稱…"));
+                row.MarkModified();
+
+                _suppressComboSelection = true;
+                RestoreComboBoxSelection(cb, row);
+                _suppressComboSelection = false;
+
+                ViewModel.StatusMessage = $"已成功將衝突項目建立為自訂名稱「{newDef.Name}」，並保留兩筆資料。";
+                ViewModel.SyncProjections();
+                return;
             }
         }
 
@@ -1431,6 +1485,17 @@ public sealed partial class MainPage : Page
             {
                 ShowScanView();
             };
+            _savedCardsTablePanel.RequestNewScan += async (s, e) =>
+            {
+                if (ViewModel.HasUnsavedChanges)
+                {
+                    bool proceed = await ShowConfirmDialogAsync("未儲存變更提示", "目前名片草稿有未儲存的變更，開啟全新名片辨識將會清除現有草稿。是否繼續？");
+                    if (!proceed) return;
+                }
+
+                ViewModel.CreateBlankDraft();
+                ShowScanView();
+            };
             _savedCardsTablePanel.RequestReloadContact += async (s, detail) =>
             {
                 if (ViewModel.HasUnsavedChanges)
@@ -1477,6 +1542,17 @@ public sealed partial class MainPage : Page
             };
             _savedCardsTablePanel.RequestNavigateToScan += (s, e) =>
             {
+                ShowScanView();
+            };
+            _savedCardsTablePanel.RequestNewScan += async (s, e) =>
+            {
+                if (ViewModel.HasUnsavedChanges)
+                {
+                    bool proceed = await ShowConfirmDialogAsync("未儲存變更提示", "目前名片草稿有未儲存的變更，開啟全新名片辨識將會清除現有草稿。是否繼續？");
+                    if (!proceed) return;
+                }
+
+                ViewModel.CreateBlankDraft();
                 ShowScanView();
             };
             _savedCardsTablePanel.RequestReloadContact += async (s, detail) =>
@@ -1750,20 +1826,20 @@ public sealed partial class MainPage : Page
             Title = "單值欄位衝突提示",
             Content = new TextBlock
             {
-                Text = $"單值欄位【{fieldName}】已有已確認內容：「{existingValue}」。\n新候選內容為：「{newValue}」。\n\n請選擇處理方式：\n- 替換：取消舊列確認狀態，改以此列為確認值。\n- 保留兩筆：同時保留兩筆為此欄位。\n- 取消：放棄變更此列欄位分類。",
+                Text = $"單值欄位【{fieldName}】已有內容：「{existingValue}」。\n新候選內容為：「{newValue}」。\n\n請選擇處理方式：\n- 替換舊列：將舊內容退回「待分類」，改以新內容為【{fieldName}】。\n- 轉為自訂欄位：將新內容建立為自訂名稱欄位，同時保留兩筆資料。\n- 取消操作：放棄變更此列欄位分類。",
                 TextWrapping = TextWrapping.Wrap
             },
             PrimaryButtonText = "替換舊列",
-            SecondaryButtonText = "保留兩筆",
+            SecondaryButtonText = "轉為自訂欄位",
             CloseButtonText = "取消操作",
-            DefaultButton = ContentDialogButton.Close
+            DefaultButton = ContentDialogButton.Primary
         };
 
         var result = await ShowManagedDialogAsync(dialog);
         return result switch
         {
             ContentDialogResult.Primary => "Replace",
-            ContentDialogResult.Secondary => "KeepBoth",
+            ContentDialogResult.Secondary => "CustomField",
             _ => "Cancel"
         };
     }
