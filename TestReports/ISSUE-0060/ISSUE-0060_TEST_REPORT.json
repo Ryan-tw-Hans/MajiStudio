@@ -1,0 +1,62 @@
+﻿{
+  "Timestamp": "2026-10-30T07:55:03.4411427Z",
+  "Version": "0.1.0-beta.38",
+  "IssueId": "ISSUE-0060",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "NativeSqliteVersion": "",
+  "TotalTests": 0,
+  "PassCount": 0,
+  "FailCount": 0,
+  "NotRunCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "ISSUE-0060-T01",
+      "Description": "\u55AE\u4E00\u6B04\u4F4D\u66F4\u65B0\u6210\u529F\uFF0C\u76EE\u6A19\u6B04\u4F4D\u503C\u6B63\u78BA\u66F4\u65B0\u4E14\u7248\u672C\u865F\u7531 rev.1 \u905E\u589E\u70BA rev.2\uFF0C\u5176\u4ED6\u6B04\u4F4D\u5B8C\u6574\u4FDD\u7559",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0060-T02",
+      "Description": "\u4FEE\u6539\u59D3\u540D\u6B04\u4F4D\u5F8C\uFF0CContactDetailModel.DisplayTitle \u8207 Name \u5373\u6642\u540C\u6B65\u53CD\u6620\u65B0\u503C",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0060-T03",
+      "Description": "\u540D\u7247\u5B58\u5728\u591A\u7B46\u96FB\u8A71\u6642\uFF0C\u55AE\u7B46\u7DE8\u8F2F\u80FD\u7CBE\u78BA\u4F9D ValueId \u66F4\u65B0\u76EE\u6A19\u96FB\u8A71\uFF0C\u53E6\u4E00\u7B46\u96FB\u8A71\u8207\u6392\u5E8F\u4E0D\u53D7\u5F71\u97FF",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0060-T04",
+      "Description": "\u7D14\u7A7A\u767D\u8F38\u5165\u80FD\u88AB\u5373\u6642\u963B\u64CB\uFF0C\u9632\u5446\u6A5F\u5236\u907F\u514D\u95DC\u9375\u6B04\u4F4D\u88AB\u8AA4\u522A\u70BA\u7A7A\u5B57\u4E32",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0060-T05",
+      "Description": "\u5167\u5BB9\u672A\u4FEE\u6539\u5373\u9EDE\u64CA\u5132\u5B58\u80FD\u88AB\u7CBE\u78BA\u8B58\u5225\u70BA\u7121\u66F4\u52D5\uFF0C\u76F4\u63A5\u8FD4\u56DE\u6AA2\u8996\u6A21\u5F0F\u800C\u4E0D\u589E\u52A0\u7248\u672C\u4FEE\u8A02",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0060-T06",
+      "Description": "\u4E26\u884C\u6216\u820A\u7248\u672C\u5132\u5B58\u8ACB\u6C42\u80FD\u88AB CAS \u6A02\u89C0\u9396\u7CBE\u6E96\u6514\u622A\uFF0C\u907F\u514D\u9AD2\u5BEB\u8986\u84CB",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    }
+  ]
+}

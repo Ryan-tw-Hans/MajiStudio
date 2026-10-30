@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -1333,7 +1334,17 @@ public sealed class SavedCardsTablePanel : UserControl
                 };
             }
 
+            string? currentSelectedId = _currentDetail?.ContactId;
             _tableListView.ItemsSource = paged.Items;
+
+            if (!string.IsNullOrEmpty(currentSelectedId))
+            {
+                var matchedItem = paged.Items.FirstOrDefault(i => i.ContactId == currentSelectedId);
+                if (matchedItem != null)
+                {
+                    _tableListView.SelectedItem = matchedItem;
+                }
+            }
 
             if (paged.TotalCount == 0)
             {
@@ -1430,21 +1441,194 @@ public sealed class SavedCardsTablePanel : UserControl
 
             // Load Values
             _detailValuesStack.Children.Clear();
+            Action? cancelCurrentEdit = null;
             foreach (var val in _currentDetail.Values)
             {
-                var rowBorder = new Border { BorderThickness = new Thickness(0, 0, 0, 1), BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"], Padding = new Thickness(0, 4, 0, 4) };
+                var rowBorder = new Border
+                {
+                    BorderThickness = new Thickness(0, 0, 0, 1),
+                    BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                    Padding = new Thickness(0, 4, 0, 4)
+                };
                 var rowGrid = new Grid();
                 rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(70) });
                 rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-                var labelText = new TextBlock { Text = val.Label, FontWeight = FontWeights.SemiBold, FontSize = 11, Opacity = 0.75, VerticalAlignment = VerticalAlignment.Top };
+                var labelText = new TextBlock
+                {
+                    Text = val.Label,
+                    FontWeight = FontWeights.SemiBold,
+                    FontSize = 11,
+                    Opacity = 0.75,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Margin = new Thickness(0, 2, 0, 0)
+                };
                 Grid.SetColumn(labelText, 0);
 
-                var valText = new TextBlock { Text = val.RawValue, FontSize = 12, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true };
-                Grid.SetColumn(valText, 1);
+                // View Mode Panel
+                var viewPanel = new Grid();
+                var valText = new TextBlock
+                {
+                    Text = val.RawValue,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    IsTextSelectionEnabled = true,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                viewPanel.Children.Add(valText);
+                Grid.SetColumn(viewPanel, 1);
+
+                // Edit Mode Panel
+                var editPanel = new StackPanel
+                {
+                    Spacing = 4,
+                    Visibility = Visibility.Collapsed
+                };
+                var editBox = new TextBox
+                {
+                    Text = val.RawValue,
+                    FontSize = 12,
+                    TextWrapping = TextWrapping.Wrap,
+                    Padding = new Thickness(6, 4, 6, 4),
+                    Margin = new Thickness(0, 0, 4, 2)
+                };
+                var actionStack = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 6,
+                    Margin = new Thickness(0, 2, 0, 2)
+                };
+                var saveBtn = new Button
+                {
+                    Content = "✔️ 儲存",
+                    FontSize = 11,
+                    Padding = new Thickness(8, 2, 8, 2),
+                    Style = (Style)Application.Current.Resources["AccentButtonStyle"]
+                };
+                var cancelBtn = new Button
+                {
+                    Content = "❌ 取消",
+                    FontSize = 11,
+                    Padding = new Thickness(8, 2, 8, 2)
+                };
+                var errorText = new TextBlock
+                {
+                    FontSize = 11,
+                    Foreground = new SolidColorBrush(Colors.Red),
+                    Visibility = Visibility.Collapsed,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap
+                };
+                actionStack.Children.Add(saveBtn);
+                actionStack.Children.Add(cancelBtn);
+                actionStack.Children.Add(errorText);
+                editPanel.Children.Add(editBox);
+                editPanel.Children.Add(actionStack);
+                Grid.SetColumn(editPanel, 1);
+
+                // Edit Button
+                var editBtn = new Button
+                {
+                    Content = "✏️",
+                    FontSize = 11,
+                    Padding = new Thickness(4, 2, 4, 2),
+                    Margin = new Thickness(4, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Background = new SolidColorBrush(Colors.Transparent),
+                    BorderBrush = new SolidColorBrush(Colors.Transparent),
+                    IsEnabled = !_currentDetail.PendingDelete
+                };
+                ToolTipService.SetToolTip(editBtn, "編輯此欄位");
+                Grid.SetColumn(editBtn, 2);
+
+                void SwitchToView()
+                {
+                    editPanel.Visibility = Visibility.Collapsed;
+                    viewPanel.Visibility = Visibility.Visible;
+                    editBtn.Visibility = Visibility.Visible;
+                    errorText.Visibility = Visibility.Collapsed;
+                    cancelCurrentEdit = null;
+                }
+
+                editBtn.Click += (s, e) =>
+                {
+                    cancelCurrentEdit?.Invoke();
+                    cancelCurrentEdit = SwitchToView;
+
+                    viewPanel.Visibility = Visibility.Collapsed;
+                    editBtn.Visibility = Visibility.Collapsed;
+                    editBox.Text = val.RawValue;
+                    errorText.Visibility = Visibility.Collapsed;
+                    editPanel.Visibility = Visibility.Visible;
+                    editBox.Focus(FocusState.Programmatic);
+                    editBox.SelectAll();
+                };
+
+                cancelBtn.Click += (s, e) => SwitchToView();
+
+                async Task DoSaveAsync()
+                {
+                    string newRaw = editBox.Text.Trim();
+                    if (string.Equals(newRaw, val.RawValue, StringComparison.Ordinal))
+                    {
+                        SwitchToView();
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(newRaw))
+                    {
+                        errorText.Text = "欄位內容不可為空白";
+                        errorText.Visibility = Visibility.Visible;
+                        return;
+                    }
+
+                    saveBtn.IsEnabled = false;
+                    cancelBtn.IsEnabled = false;
+                    saveBtn.Content = "儲存中...";
+                    errorText.Visibility = Visibility.Collapsed;
+
+                    try
+                    {
+                        var (success, err) = await SaveSingleFieldEditAsync(val.ValueId, newRaw);
+                        if (!success)
+                        {
+                            errorText.Text = err ?? "儲存失敗";
+                            errorText.Visibility = Visibility.Visible;
+                            saveBtn.IsEnabled = true;
+                            cancelBtn.IsEnabled = true;
+                            saveBtn.Content = "✔️ 儲存";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        errorText.Text = ex.Message;
+                        errorText.Visibility = Visibility.Visible;
+                        saveBtn.IsEnabled = true;
+                        cancelBtn.IsEnabled = true;
+                        saveBtn.Content = "✔️ 儲存";
+                    }
+                }
+
+                saveBtn.Click += async (s, e) => await DoSaveAsync();
+                editBox.KeyDown += async (s, e) =>
+                {
+                    if (e.Key == Windows.System.VirtualKey.Enter)
+                    {
+                        e.Handled = true;
+                        await DoSaveAsync();
+                    }
+                    else if (e.Key == Windows.System.VirtualKey.Escape)
+                    {
+                        e.Handled = true;
+                        SwitchToView();
+                    }
+                };
 
                 rowGrid.Children.Add(labelText);
-                rowGrid.Children.Add(valText);
+                rowGrid.Children.Add(viewPanel);
+                rowGrid.Children.Add(editPanel);
+                rowGrid.Children.Add(editBtn);
                 rowBorder.Child = rowGrid;
                 _detailValuesStack.Children.Add(rowBorder);
             }
@@ -1591,6 +1775,85 @@ public sealed class SavedCardsTablePanel : UserControl
         await dialog.ShowAsync();
         await LoadTagChipsAsync();
         await LoadPageAsync(_currentPage);
+    }
+
+    private async Task<(bool Succeeded, string? Error)> SaveSingleFieldEditAsync(string valueId, string newRawValue)
+    {
+        if (_currentDetail == null) return (false, "未選取名片");
+
+        // 1. Build updated value snapshots
+        var valueSnapshots = new List<DraftValueSnapshot>();
+        foreach (var v in _currentDetail.Values)
+        {
+            string raw = (v.ValueId == valueId) ? newRawValue : v.RawValue;
+            valueSnapshots.Add(new DraftValueSnapshot
+            {
+                ValueKind = v.ValueKind,
+                CustomFieldDefinitionId = v.CustomFieldDefinitionId,
+                CustomFieldNameSnapshot = v.CustomFieldNameSnapshot,
+                RawValue = raw,
+                NormalizedValue = (v.ValueId == valueId) ? null : v.NormalizedValue,
+                Label = v.Label,
+                Ordinal = v.Ordinal,
+                SourceMode = v.SourceMode,
+                LockedAt = (v.ValueId == valueId) ? DateTimeOffset.UtcNow : v.LockedAt
+            });
+        }
+
+        // 2. Prepare image data
+        byte[]? imgBytes = _currentDetail.VerifiedImageBytes;
+        if (imgBytes == null || imgBytes.Length == 0)
+        {
+            string? imgPath = _storageService.GetCardImageAbsolutePath(_currentDetail.ContactId);
+            if (!string.IsNullOrEmpty(imgPath) && File.Exists(imgPath))
+            {
+                try
+                {
+                    imgBytes = await File.ReadAllBytesAsync(imgPath);
+                }
+                catch { }
+            }
+        }
+
+        string imgSha = _currentDetail.ImageAsset?.Sha256 ?? string.Empty;
+        if (string.IsNullOrEmpty(imgSha) && imgBytes != null && imgBytes.Length > 0)
+        {
+            using var sha = SHA256.Create();
+            imgSha = Convert.ToHexString(sha.ComputeHash(imgBytes));
+        }
+
+        string fingerprint = DraftSnapshotFactory.ComputeFingerprint(_currentDetail.ContactId, valueSnapshots, imgSha);
+
+        var snapshot = new ContactDraftSnapshot
+        {
+            ContactId = _currentDetail.ContactId,
+            SaveOperationId = Guid.NewGuid().ToString("N"),
+            ExpectedRevision = _currentDetail.Revision,
+            Revision = _currentDetail.Revision + 1,
+            Values = valueSnapshots,
+            Tags = _currentDetail.Tags.Select(t => new TagChoice(t.TagId, t.DisplayName)).ToArray(),
+            ExpectedTagRevision = _currentDetail.TagRevision,
+            WriteTags = false,
+            ImageBytes = imgBytes ?? Array.Empty<byte>(),
+            ImageSha256 = imgSha,
+            MimeType = _currentDetail.ImageAsset?.MimeType ?? "image/png",
+            Width = _currentDetail.ImageAsset?.Width ?? 0,
+            Height = _currentDetail.ImageAsset?.Height ?? 0,
+            CaptureSource = _currentDetail.ImageAsset?.CaptureSource ?? "ImagePickerCopy",
+            CompletionSource = CompletionSources.Manual,
+            Fingerprint = fingerprint
+        };
+
+        var saveResult = await _storageService.SaveDraftAsync(snapshot);
+        if (!saveResult.Succeeded)
+        {
+            return (false, saveResult.ErrorMessage ?? "資料庫儲存失敗");
+        }
+
+        string contactId = _currentDetail.ContactId;
+        await LoadPageAsync(_currentPage);
+        await LoadContactDetailAsync(contactId);
+        return (true, null);
     }
 
     private async Task EditDetailTagsAsync()
