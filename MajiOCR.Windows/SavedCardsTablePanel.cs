@@ -1520,33 +1520,90 @@ public sealed class SavedCardsTablePanel : UserControl
                     VerticalAlignment = VerticalAlignment.Center,
                     TextWrapping = TextWrapping.Wrap
                 };
+                var delInEditBtn = new Button
+                {
+                    Content = "🗑️ 刪除",
+                    FontSize = 11,
+                    Padding = new Thickness(8, 2, 8, 2),
+                    Foreground = new SolidColorBrush(Colors.Red)
+                };
+                ToolTipService.SetToolTip(delInEditBtn, "刪除此欄位");
+
                 actionStack.Children.Add(saveBtn);
                 actionStack.Children.Add(cancelBtn);
+                actionStack.Children.Add(delInEditBtn);
                 actionStack.Children.Add(errorText);
                 editPanel.Children.Add(editBox);
                 editPanel.Children.Add(actionStack);
                 Grid.SetColumn(editPanel, 1);
 
-                // Edit Button
+                // Action Buttons (Edit & Delete)
+                var opStack = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 2,
+                    VerticalAlignment = VerticalAlignment.Top,
+                    Margin = new Thickness(4, 0, 0, 0)
+                };
+                Grid.SetColumn(opStack, 2);
+
                 var editBtn = new Button
                 {
                     Content = "✏️",
                     FontSize = 11,
                     Padding = new Thickness(4, 2, 4, 2),
-                    Margin = new Thickness(4, 0, 0, 0),
-                    VerticalAlignment = VerticalAlignment.Top,
                     Background = new SolidColorBrush(Colors.Transparent),
                     BorderBrush = new SolidColorBrush(Colors.Transparent),
                     IsEnabled = !_currentDetail.PendingDelete
                 };
                 ToolTipService.SetToolTip(editBtn, "編輯此欄位");
-                Grid.SetColumn(editBtn, 2);
+
+                var deleteBtn = new Button
+                {
+                    Content = "🗑️",
+                    FontSize = 11,
+                    Padding = new Thickness(4, 2, 4, 2),
+                    Background = new SolidColorBrush(Colors.Transparent),
+                    BorderBrush = new SolidColorBrush(Colors.Transparent),
+                    IsEnabled = !_currentDetail.PendingDelete
+                };
+                ToolTipService.SetToolTip(deleteBtn, "刪除此欄位");
+
+                var delConfirmStack = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 2,
+                    Visibility = Visibility.Collapsed
+                };
+                var delConfirmBtn = new Button
+                {
+                    Content = "確定刪除",
+                    FontSize = 10,
+                    Padding = new Thickness(4, 2, 4, 2),
+                    Foreground = new SolidColorBrush(Colors.Red),
+                    BorderBrush = new SolidColorBrush(Colors.Red)
+                };
+                var delCancelBtn = new Button
+                {
+                    Content = "✕",
+                    FontSize = 10,
+                    Padding = new Thickness(4, 2, 4, 2)
+                };
+                delConfirmStack.Children.Add(delConfirmBtn);
+                delConfirmStack.Children.Add(delCancelBtn);
+
+                opStack.Children.Add(editBtn);
+                opStack.Children.Add(deleteBtn);
+                opStack.Children.Add(delConfirmStack);
 
                 void SwitchToView()
                 {
                     editPanel.Visibility = Visibility.Collapsed;
                     viewPanel.Visibility = Visibility.Visible;
+                    opStack.Visibility = Visibility.Visible;
                     editBtn.Visibility = Visibility.Visible;
+                    deleteBtn.Visibility = Visibility.Visible;
+                    delConfirmStack.Visibility = Visibility.Collapsed;
                     errorText.Visibility = Visibility.Collapsed;
                     cancelCurrentEdit = null;
                 }
@@ -1557,7 +1614,7 @@ public sealed class SavedCardsTablePanel : UserControl
                     cancelCurrentEdit = SwitchToView;
 
                     viewPanel.Visibility = Visibility.Collapsed;
-                    editBtn.Visibility = Visibility.Collapsed;
+                    opStack.Visibility = Visibility.Collapsed;
                     editBox.Text = val.RawValue;
                     errorText.Visibility = Visibility.Collapsed;
                     editPanel.Visibility = Visibility.Visible;
@@ -1565,7 +1622,60 @@ public sealed class SavedCardsTablePanel : UserControl
                     editBox.SelectAll();
                 };
 
+                deleteBtn.Click += (s, e) =>
+                {
+                    cancelCurrentEdit?.Invoke();
+                    editBtn.Visibility = Visibility.Collapsed;
+                    deleteBtn.Visibility = Visibility.Collapsed;
+                    delConfirmStack.Visibility = Visibility.Visible;
+                    cancelCurrentEdit = () =>
+                    {
+                        editBtn.Visibility = Visibility.Visible;
+                        deleteBtn.Visibility = Visibility.Visible;
+                        delConfirmStack.Visibility = Visibility.Collapsed;
+                        cancelCurrentEdit = null;
+                    };
+                };
+
+                delCancelBtn.Click += (s, e) =>
+                {
+                    cancelCurrentEdit?.Invoke();
+                };
+
                 cancelBtn.Click += (s, e) => SwitchToView();
+
+                async Task DoDeleteAsync()
+                {
+                    delConfirmBtn.IsEnabled = false;
+                    delCancelBtn.IsEnabled = false;
+                    delInEditBtn.IsEnabled = false;
+                    delConfirmBtn.Content = "刪除中...";
+                    try
+                    {
+                        var (success, err) = await DeleteFieldAsync(val.ValueId);
+                        if (!success)
+                        {
+                            delConfirmBtn.IsEnabled = true;
+                            delCancelBtn.IsEnabled = true;
+                            delInEditBtn.IsEnabled = true;
+                            delConfirmBtn.Content = "確定刪除";
+                            errorText.Text = err ?? "刪除失敗";
+                            errorText.Visibility = Visibility.Visible;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        delConfirmBtn.IsEnabled = true;
+                        delCancelBtn.IsEnabled = true;
+                        delInEditBtn.IsEnabled = true;
+                        delConfirmBtn.Content = "確定刪除";
+                        errorText.Text = ex.Message;
+                        errorText.Visibility = Visibility.Visible;
+                    }
+                }
+
+                delConfirmBtn.Click += async (s, e) => await DoDeleteAsync();
+                delInEditBtn.Click += async (s, e) => await DoDeleteAsync();
 
                 async Task DoSaveAsync()
                 {
@@ -1585,6 +1695,7 @@ public sealed class SavedCardsTablePanel : UserControl
 
                     saveBtn.IsEnabled = false;
                     cancelBtn.IsEnabled = false;
+                    delInEditBtn.IsEnabled = false;
                     saveBtn.Content = "儲存中...";
                     errorText.Visibility = Visibility.Collapsed;
 
@@ -1597,6 +1708,7 @@ public sealed class SavedCardsTablePanel : UserControl
                             errorText.Visibility = Visibility.Visible;
                             saveBtn.IsEnabled = true;
                             cancelBtn.IsEnabled = true;
+                            delInEditBtn.IsEnabled = true;
                             saveBtn.Content = "✔️ 儲存";
                         }
                     }
@@ -1606,6 +1718,7 @@ public sealed class SavedCardsTablePanel : UserControl
                         errorText.Visibility = Visibility.Visible;
                         saveBtn.IsEnabled = true;
                         cancelBtn.IsEnabled = true;
+                        delInEditBtn.IsEnabled = true;
                         saveBtn.Content = "✔️ 儲存";
                     }
                 }
@@ -1628,10 +1741,239 @@ public sealed class SavedCardsTablePanel : UserControl
                 rowGrid.Children.Add(labelText);
                 rowGrid.Children.Add(viewPanel);
                 rowGrid.Children.Add(editPanel);
-                rowGrid.Children.Add(editBtn);
+                rowGrid.Children.Add(opStack);
                 rowBorder.Child = rowGrid;
                 _detailValuesStack.Children.Add(rowBorder);
             }
+
+            // Option B: Add Field Button & Panel at bottom of the list
+            var addBtnBorder = new Border
+            {
+                Padding = new Thickness(0, 8, 0, 4)
+            };
+            var addFieldBtn = new Button
+            {
+                Content = "➕ 新增欄位",
+                FontSize = 12,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(10, 6, 10, 6),
+                IsEnabled = !_currentDetail.PendingDelete
+            };
+            addBtnBorder.Child = addFieldBtn;
+            _detailValuesStack.Children.Add(addBtnBorder);
+
+            var addPanelBorder = new Border
+            {
+                BorderThickness = new Thickness(1),
+                BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+                CornerRadius = new CornerRadius(4),
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 8, 0, 4),
+                Visibility = Visibility.Collapsed
+            };
+            var addPanelStack = new StackPanel { Spacing = 6 };
+
+            var addTitleText = new TextBlock
+            {
+                Text = "新增欄位",
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 12
+            };
+            addPanelStack.Children.Add(addTitleText);
+
+            var kindCombo = new ComboBox
+            {
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                FontSize = 12
+            };
+            var kindOptions = new (string Kind, string Label)[]
+            {
+                (CanonicalValueKind.Phone, "電話"),
+                (CanonicalValueKind.Email, "Email"),
+                (CanonicalValueKind.Address, "地址"),
+                (CanonicalValueKind.Website, "網站"),
+                (CanonicalValueKind.Note, "備註"),
+                (CanonicalValueKind.Title, "職稱"),
+                (CanonicalValueKind.Company, "公司"),
+                (CanonicalValueKind.Name, "姓名"),
+                (CanonicalValueKind.Custom, "自訂欄位")
+            };
+            foreach (var opt in kindOptions)
+            {
+                kindCombo.Items.Add(new ComboBoxItem { Content = opt.Label, Tag = opt.Kind });
+            }
+            kindCombo.SelectedIndex = 0;
+            addPanelStack.Children.Add(kindCombo);
+
+            var customNameBox = new TextBox
+            {
+                PlaceholderText = "請輸入自訂欄位名稱 (如: Line ID、傳真)",
+                FontSize = 12,
+                Visibility = Visibility.Collapsed
+            };
+            addPanelStack.Children.Add(customNameBox);
+
+            kindCombo.SelectionChanged += (s, e) =>
+            {
+                if (kindCombo.SelectedItem is ComboBoxItem item && (string)item.Tag == CanonicalValueKind.Custom)
+                {
+                    customNameBox.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    customNameBox.Visibility = Visibility.Collapsed;
+                }
+            };
+
+            var addValBox = new TextBox
+            {
+                PlaceholderText = "請輸入欄位內容",
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap
+            };
+            addPanelStack.Children.Add(addValBox);
+
+            var addActionStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 6,
+                Margin = new Thickness(0, 4, 0, 0)
+            };
+            var addSaveBtn = new Button
+            {
+                Content = "✔️ 儲存",
+                FontSize = 11,
+                Padding = new Thickness(10, 4, 10, 4),
+                Style = (Style)Application.Current.Resources["AccentButtonStyle"]
+            };
+            var addCancelBtn = new Button
+            {
+                Content = "❌ 取消",
+                FontSize = 11,
+                Padding = new Thickness(10, 4, 10, 4)
+            };
+            var addErrorText = new TextBlock
+            {
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Colors.Red),
+                Visibility = Visibility.Collapsed,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextWrapping = TextWrapping.Wrap
+            };
+            addActionStack.Children.Add(addSaveBtn);
+            addActionStack.Children.Add(addCancelBtn);
+            addActionStack.Children.Add(addErrorText);
+            addPanelStack.Children.Add(addActionStack);
+
+            addPanelBorder.Child = addPanelStack;
+            _detailValuesStack.Children.Add(addPanelBorder);
+
+            void CloseAddPanel()
+            {
+                addPanelBorder.Visibility = Visibility.Collapsed;
+                addBtnBorder.Visibility = Visibility.Visible;
+                addErrorText.Visibility = Visibility.Collapsed;
+                cancelCurrentEdit = null;
+            }
+
+            addFieldBtn.Click += (s, e) =>
+            {
+                cancelCurrentEdit?.Invoke();
+                cancelCurrentEdit = CloseAddPanel;
+
+                addBtnBorder.Visibility = Visibility.Collapsed;
+                addPanelBorder.Visibility = Visibility.Visible;
+                kindCombo.SelectedIndex = 0;
+                customNameBox.Text = string.Empty;
+                customNameBox.Visibility = Visibility.Collapsed;
+                addValBox.Text = string.Empty;
+                addErrorText.Visibility = Visibility.Collapsed;
+                addValBox.Focus(FocusState.Programmatic);
+            };
+
+            addCancelBtn.Click += (s, e) => CloseAddPanel();
+
+            async Task DoAddSaveAsync()
+            {
+                string rawVal = addValBox.Text.Trim();
+                if (string.IsNullOrWhiteSpace(rawVal))
+                {
+                    addErrorText.Text = "欄位內容不可為空白";
+                    addErrorText.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                var selectedItem = kindCombo.SelectedItem as ComboBoxItem;
+                string kind = (selectedItem?.Tag as string) ?? CanonicalValueKind.Phone;
+                string label = (selectedItem?.Content as string) ?? "電話";
+                string? customName = null;
+
+                if (kind == CanonicalValueKind.Custom)
+                {
+                    customName = customNameBox.Text.Trim();
+                    if (string.IsNullOrWhiteSpace(customName))
+                    {
+                        addErrorText.Text = "請輸入自訂欄位名稱";
+                        addErrorText.Visibility = Visibility.Visible;
+                        return;
+                    }
+                    label = $"{customName} (自訂)";
+                }
+
+                addSaveBtn.IsEnabled = false;
+                addCancelBtn.IsEnabled = false;
+                addSaveBtn.Content = "儲存中...";
+                addErrorText.Visibility = Visibility.Collapsed;
+
+                try
+                {
+                    var (success, err) = await AddNewFieldAsync(kind, label, rawVal, customName);
+                    if (!success)
+                    {
+                        addErrorText.Text = err ?? "儲存失敗";
+                        addErrorText.Visibility = Visibility.Visible;
+                        addSaveBtn.IsEnabled = true;
+                        addCancelBtn.IsEnabled = true;
+                        addSaveBtn.Content = "✔️ 儲存";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    addErrorText.Text = ex.Message;
+                    addErrorText.Visibility = Visibility.Visible;
+                    addSaveBtn.IsEnabled = true;
+                    addCancelBtn.IsEnabled = true;
+                    addSaveBtn.Content = "✔️ 儲存";
+                }
+            }
+
+            addSaveBtn.Click += async (s, e) => await DoAddSaveAsync();
+            addValBox.KeyDown += async (s, e) =>
+            {
+                if (e.Key == Windows.System.VirtualKey.Enter)
+                {
+                    e.Handled = true;
+                    await DoAddSaveAsync();
+                }
+                else if (e.Key == Windows.System.VirtualKey.Escape)
+                {
+                    e.Handled = true;
+                    CloseAddPanel();
+                }
+            };
+            customNameBox.KeyDown += async (s, e) =>
+            {
+                if (e.Key == Windows.System.VirtualKey.Enter)
+                {
+                    e.Handled = true;
+                    await DoAddSaveAsync();
+                }
+                else if (e.Key == Windows.System.VirtualKey.Escape)
+                {
+                    e.Handled = true;
+                    CloseAddPanel();
+                }
+            };
 
             // Load Thumbnail Image
             if (_currentDetail.IsImageAvailable && _currentDetail.VerifiedImageBytes != null)
@@ -1777,30 +2119,11 @@ public sealed class SavedCardsTablePanel : UserControl
         await LoadPageAsync(_currentPage);
     }
 
-    private async Task<(bool Succeeded, string? Error)> SaveSingleFieldEditAsync(string valueId, string newRawValue)
+    private async Task<(bool Succeeded, string? Error)> SaveUpdatedValuesAsync(List<DraftValueSnapshot> valueSnapshots)
     {
         if (_currentDetail == null) return (false, "未選取名片");
 
-        // 1. Build updated value snapshots
-        var valueSnapshots = new List<DraftValueSnapshot>();
-        foreach (var v in _currentDetail.Values)
-        {
-            string raw = (v.ValueId == valueId) ? newRawValue : v.RawValue;
-            valueSnapshots.Add(new DraftValueSnapshot
-            {
-                ValueKind = v.ValueKind,
-                CustomFieldDefinitionId = v.CustomFieldDefinitionId,
-                CustomFieldNameSnapshot = v.CustomFieldNameSnapshot,
-                RawValue = raw,
-                NormalizedValue = (v.ValueId == valueId) ? null : v.NormalizedValue,
-                Label = v.Label,
-                Ordinal = v.Ordinal,
-                SourceMode = v.SourceMode,
-                LockedAt = (v.ValueId == valueId) ? DateTimeOffset.UtcNow : v.LockedAt
-            });
-        }
-
-        // 2. Prepare image data
+        // Prepare image data
         byte[]? imgBytes = _currentDetail.VerifiedImageBytes;
         if (imgBytes == null || imgBytes.Length == 0)
         {
@@ -1854,6 +2177,95 @@ public sealed class SavedCardsTablePanel : UserControl
         await LoadPageAsync(_currentPage);
         await LoadContactDetailAsync(contactId);
         return (true, null);
+    }
+
+    private async Task<(bool Succeeded, string? Error)> SaveSingleFieldEditAsync(string valueId, string newRawValue)
+    {
+        if (_currentDetail == null) return (false, "未選取名片");
+
+        var valueSnapshots = new List<DraftValueSnapshot>();
+        foreach (var v in _currentDetail.Values)
+        {
+            string raw = (v.ValueId == valueId) ? newRawValue : v.RawValue;
+            valueSnapshots.Add(new DraftValueSnapshot
+            {
+                ValueKind = v.ValueKind,
+                CustomFieldDefinitionId = v.CustomFieldDefinitionId,
+                CustomFieldNameSnapshot = v.CustomFieldNameSnapshot,
+                RawValue = raw,
+                NormalizedValue = (v.ValueId == valueId) ? null : v.NormalizedValue,
+                Label = v.Label,
+                Ordinal = v.Ordinal,
+                SourceMode = v.SourceMode,
+                LockedAt = (v.ValueId == valueId) ? DateTimeOffset.UtcNow : v.LockedAt
+            });
+        }
+
+        return await SaveUpdatedValuesAsync(valueSnapshots);
+    }
+
+    private async Task<(bool Succeeded, string? Error)> DeleteFieldAsync(string valueId)
+    {
+        if (_currentDetail == null) return (false, "未選取名片");
+
+        var valueSnapshots = new List<DraftValueSnapshot>();
+        int ord = 0;
+        foreach (var v in _currentDetail.Values)
+        {
+            if (v.ValueId == valueId) continue;
+            valueSnapshots.Add(new DraftValueSnapshot
+            {
+                ValueKind = v.ValueKind,
+                CustomFieldDefinitionId = v.CustomFieldDefinitionId,
+                CustomFieldNameSnapshot = v.CustomFieldNameSnapshot,
+                RawValue = v.RawValue,
+                NormalizedValue = v.NormalizedValue,
+                Label = v.Label,
+                Ordinal = ord++,
+                SourceMode = v.SourceMode,
+                LockedAt = v.LockedAt
+            });
+        }
+
+        return await SaveUpdatedValuesAsync(valueSnapshots);
+    }
+
+    private async Task<(bool Succeeded, string? Error)> AddNewFieldAsync(string valueKind, string label, string rawValue, string? customFieldName)
+    {
+        if (_currentDetail == null) return (false, "未選取名片");
+
+        var valueSnapshots = new List<DraftValueSnapshot>();
+        int ord = 0;
+        foreach (var v in _currentDetail.Values)
+        {
+            valueSnapshots.Add(new DraftValueSnapshot
+            {
+                ValueKind = v.ValueKind,
+                CustomFieldDefinitionId = v.CustomFieldDefinitionId,
+                CustomFieldNameSnapshot = v.CustomFieldNameSnapshot,
+                RawValue = v.RawValue,
+                NormalizedValue = v.NormalizedValue,
+                Label = v.Label,
+                Ordinal = ord++,
+                SourceMode = v.SourceMode,
+                LockedAt = v.LockedAt
+            });
+        }
+
+        valueSnapshots.Add(new DraftValueSnapshot
+        {
+            ValueKind = valueKind,
+            CustomFieldDefinitionId = null,
+            CustomFieldNameSnapshot = (valueKind == CanonicalValueKind.Custom) ? customFieldName : null,
+            RawValue = rawValue,
+            NormalizedValue = null,
+            Label = label,
+            Ordinal = ord,
+            SourceMode = CompletionSources.Manual,
+            LockedAt = DateTimeOffset.UtcNow
+        });
+
+        return await SaveUpdatedValuesAsync(valueSnapshots);
     }
 
     private async Task EditDetailTagsAsync()

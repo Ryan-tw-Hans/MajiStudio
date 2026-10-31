@@ -1,0 +1,62 @@
+﻿{
+  "Timestamp": "2026-10-31T04:45:18.7309172Z",
+  "Version": "0.1.0-beta.39",
+  "IssueId": "ISSUE-0061",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "NativeSqliteVersion": "",
+  "TotalTests": 0,
+  "PassCount": 0,
+  "FailCount": 0,
+  "NotRunCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "ISSUE-0061-T01",
+      "Description": "\u65B0\u589E\u6A19\u6E96\u6B04\u4F4D\uFF08\u5099\u8A3B\uFF09\u6210\u529F\u5BEB\u5165\u8CC7\u6599\u5EAB\uFF0CRevision \u7531 rev.1 \u905E\u589E\u70BA rev.2\uFF0C\u660E\u7D30\u5B8C\u6574\u5305\u542B\u65B0\u6B04\u4F4D",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0061-T02",
+      "Description": "\u65B0\u589E\u81EA\u8A02\u6B04\u4F4D\u6210\u529F\u4FDD\u5B58 Custom \u985E\u5225\u3001\u81EA\u8A02\u540D\u7A31\u5FEB\u7167\u8207\u5167\u5BB9\uFF0CRevision \u6B63\u78BA\u905E\u589E",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0061-T03",
+      "Description": "\u65B0\u589E\u6B04\u4F4D\u4E4B\u5167\u5BB9\u7A7A\u767D\u6216\u81EA\u8A02\u6B04\u4F4D\u540D\u7A31\u7A7A\u767D\u80FD\u88AB\u9632\u5446\u898F\u5247\u5373\u6642\u963B\u64CB\uFF0C\u4E0D\u767C\u52D5\u7121\u6548\u5B58\u6A94",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0061-T04",
+      "Description": "\u522A\u9664\u6307\u5B9A\u6B04\u4F4D\u80FD\u7CBE\u6E96\u81EA\u8CC7\u6599\u5EAB\u79FB\u9664\u8A72\u6B04\u4F4D\uFF0C\u5176\u4ED6\u6B04\u4F4D\u5B8C\u6574\u4FDD\u7559\uFF0CRevision \u7531 rev.1 \u905E\u589E\u70BA rev.2",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0061-T05",
+      "Description": "\u522A\u9664\u59D3\u540D\u6B04\u4F4D\u5F8C\uFF0CDisplayTitle \u80FD\u5E73\u6ED1\u9000\u56DE\u986F\u793A\u516C\u53F8\u540D\u7A31\uFF0CDisplaySubtitle \u8F49\u70BA\u7A7A\u5B57\u4E32",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0061-T06",
+      "Description": "\u4E26\u884C\u7248\u672C\u885D\u7A81 (CAS) \u9632\u8B77\u5728\u65B0\u589E\u8207\u522A\u9664\u64CD\u4F5C\u4E2D\u5747\u80FD\u7CBE\u78BA\u751F\u6548\uFF0C\u963B\u64CB\u9AD2\u5BEB\u8207\u7AF6\u614B",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "",
+      "LatencyMs": 0
+    }
+  ]
+}
