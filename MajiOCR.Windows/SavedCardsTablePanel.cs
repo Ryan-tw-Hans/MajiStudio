@@ -79,6 +79,9 @@ public sealed class SavedCardsTablePanel : UserControl
     private Grid _tableContainerGrid = null!;
     private Border _detailDrawerBorder = null!;
     private ColumnDefinition _detailColumnDef = null!;
+    private ColumnDefinition _splitterColumnDef = null!;
+    private FrameworkElement _detailSplitter = null!;
+    private double _lastDetailDrawerWidth = 340;
     private bool _isDetailDrawerOpen = true;
 
     // Top Bar controls
@@ -435,10 +438,22 @@ public sealed class SavedCardsTablePanel : UserControl
         {
             HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Stretch,
-            ColumnSpacing = 12
+            ColumnSpacing = 0
         };
-        mainSplitGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) }); // Table area
-        _detailColumnDef = new ColumnDefinition { Width = new GridLength(340) }; // Detail drawer
+        mainSplitGrid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = new GridLength(1, GridUnitType.Star),
+            MinWidth = 360
+        }); // Col 0: Table area
+
+        _splitterColumnDef = new ColumnDefinition { Width = GridLength.Auto }; // Col 1: Splitter
+        mainSplitGrid.ColumnDefinitions.Add(_splitterColumnDef);
+
+        _detailColumnDef = new ColumnDefinition
+        {
+            Width = new GridLength(340),
+            MinWidth = 260
+        }; // Col 2: Detail drawer
         mainSplitGrid.ColumnDefinitions.Add(_detailColumnDef);
 
         // --- Left Table Container ---
@@ -613,8 +628,14 @@ public sealed class SavedCardsTablePanel : UserControl
         Grid.SetRow(tableBodyBorder, 1);
         _tableContainerGrid.Children.Add(tableBodyBorder);
 
+        _tableContainerGrid.Margin = new Thickness(0, 0, 4, 0);
         Grid.SetColumn(_tableContainerGrid, 0);
         mainSplitGrid.Children.Add(_tableContainerGrid);
+
+        // --- Center Splitter Divider ---
+        _detailSplitter = CreateDetailSplitter(mainSplitGrid);
+        Grid.SetColumn(_detailSplitter, 1);
+        mainSplitGrid.Children.Add(_detailSplitter);
 
         // --- Right Detail Drawer ---
         _detailDrawerBorder = new Border
@@ -623,7 +644,15 @@ public sealed class SavedCardsTablePanel : UserControl
             CornerRadius = new CornerRadius(6),
             BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
             Background = (Brush)Application.Current.Resources["LayerFillColorDefaultBrush"],
-            Padding = new Thickness(12)
+            Padding = new Thickness(12),
+            Margin = new Thickness(4, 0, 0, 0)
+        };
+        _detailDrawerBorder.SizeChanged += (s, e) =>
+        {
+            if (_isDetailDrawerOpen && e.NewSize.Width >= 200)
+            {
+                _lastDetailDrawerWidth = e.NewSize.Width;
+            }
         };
 
         var drawerContainerGrid = new Grid();
@@ -804,7 +833,7 @@ public sealed class SavedCardsTablePanel : UserControl
         drawerContainerGrid.Children.Add(_deleteConfirmGrid);
 
         _detailDrawerBorder.Child = drawerContainerGrid;
-        Grid.SetColumn(_detailDrawerBorder, 1);
+        Grid.SetColumn(_detailDrawerBorder, 2);
         mainSplitGrid.Children.Add(_detailDrawerBorder);
 
         Grid.SetRow(mainSplitGrid, 2);
@@ -911,9 +940,27 @@ public sealed class SavedCardsTablePanel : UserControl
         _toggleDrawerBtn.Click += (s, e) =>
         {
             _isDetailDrawerOpen = !_isDetailDrawerOpen;
-            _detailColumnDef.Width = _isDetailDrawerOpen ? new GridLength(340) : new GridLength(0);
-            _detailDrawerBorder.Visibility = _isDetailDrawerOpen ? Visibility.Visible : Visibility.Collapsed;
-            _toggleDrawerBtn.Content = _isDetailDrawerOpen ? "📋 收合明細" : "📋 展開明細";
+            if (_isDetailDrawerOpen)
+            {
+                double targetWidth = _lastDetailDrawerWidth >= 260 ? _lastDetailDrawerWidth : 340;
+                _detailColumnDef.Width = new GridLength(targetWidth);
+                _detailDrawerBorder.Visibility = Visibility.Visible;
+                _detailSplitter.Visibility = Visibility.Visible;
+                _splitterColumnDef.Width = GridLength.Auto;
+                _toggleDrawerBtn.Content = "📋 收合明細";
+            }
+            else
+            {
+                if (_detailDrawerBorder.ActualWidth >= 200)
+                {
+                    _lastDetailDrawerWidth = _detailDrawerBorder.ActualWidth;
+                }
+                _detailColumnDef.Width = new GridLength(0);
+                _detailDrawerBorder.Visibility = Visibility.Collapsed;
+                _detailSplitter.Visibility = Visibility.Collapsed;
+                _splitterColumnDef.Width = new GridLength(0);
+                _toggleDrawerBtn.Content = "📋 展開明細";
+            }
         };
         rightStack.Children.Add(_toggleDrawerBtn);
 
@@ -4203,4 +4250,139 @@ public sealed class SavedCardsTablePanel : UserControl
     }
 
     #endregion
+
+    private FrameworkElement CreateDetailSplitter(Grid parentGrid)
+    {
+        var rootGrid = new Grid
+        {
+            Width = 12,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent)
+        };
+
+        // Vertical fine divider line
+        var lineBorder = new Border
+        {
+            Width = 1,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Stretch,
+            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"]
+        };
+        rootGrid.Children.Add(lineBorder);
+
+        // Center grip handle
+        var gripHandle = new Border
+        {
+            Width = 4,
+            Height = 36,
+            CornerRadius = new CornerRadius(2),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Background = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"]
+        };
+        rootGrid.Children.Add(gripHandle);
+
+        ToolTipService.SetToolTip(rootGrid, "拖曳調整左右欄寬（雙擊重設為預設寬度 340px）");
+
+        bool isDragging = false;
+        Point startPoint = default;
+        double startWidth = 0;
+
+        void SetHighlight(bool highlight)
+        {
+            if (highlight)
+            {
+                var accent = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+                lineBorder.Background = accent;
+                gripHandle.Background = accent;
+                rootGrid.Background = new SolidColorBrush(Windows.UI.Color.FromArgb(20, 0, 120, 215));
+                try
+                {
+                    this.ProtectedCursor = Microsoft.UI.Input.InputSystemCursor.Create(Microsoft.UI.Input.InputSystemCursorShape.SizeWestEast);
+                }
+                catch { }
+            }
+            else
+            {
+                lineBorder.Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"];
+                gripHandle.Background = (Brush)Application.Current.Resources["ControlStrokeColorDefaultBrush"];
+                rootGrid.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+                try
+                {
+                    this.ProtectedCursor = null;
+                }
+                catch { }
+            }
+        }
+
+        rootGrid.PointerEntered += (s, e) =>
+        {
+            if (!isDragging) SetHighlight(true);
+        };
+
+        rootGrid.PointerExited += (s, e) =>
+        {
+            if (!isDragging) SetHighlight(false);
+        };
+
+        rootGrid.PointerPressed += (s, e) =>
+        {
+            if (e.GetCurrentPoint(rootGrid).Properties.IsLeftButtonPressed)
+            {
+                isDragging = true;
+                rootGrid.CapturePointer(e.Pointer);
+                startPoint = e.GetCurrentPoint(this).Position;
+                startWidth = _detailDrawerBorder.ActualWidth > 0 
+                    ? _detailDrawerBorder.ActualWidth 
+                    : (_detailColumnDef.Width.IsAbsolute ? _detailColumnDef.Width.Value : 340);
+                SetHighlight(true);
+                e.Handled = true;
+            }
+        };
+
+        rootGrid.PointerMoved += (s, e) =>
+        {
+            if (isDragging)
+            {
+                var currentPoint = e.GetCurrentPoint(this).Position;
+                double delta = currentPoint.X - startPoint.X;
+                double maxAllowed = Math.Max(260, parentGrid.ActualWidth - 360 - 12);
+                double newWidth = Math.Clamp(startWidth - delta, 260, maxAllowed);
+                _detailColumnDef.Width = new GridLength(newWidth);
+                _lastDetailDrawerWidth = newWidth;
+                e.Handled = true;
+            }
+        };
+
+        rootGrid.PointerReleased += (s, e) =>
+        {
+            if (isDragging)
+            {
+                isDragging = false;
+                rootGrid.ReleasePointerCapture(e.Pointer);
+                SetHighlight(false);
+                e.Handled = true;
+            }
+        };
+
+        rootGrid.PointerCanceled += (s, e) =>
+        {
+            if (isDragging)
+            {
+                isDragging = false;
+                rootGrid.ReleasePointerCapture(e.Pointer);
+                SetHighlight(false);
+            }
+        };
+
+        rootGrid.DoubleTapped += (s, e) =>
+        {
+            _lastDetailDrawerWidth = 340;
+            _detailColumnDef.Width = new GridLength(340);
+            e.Handled = true;
+        };
+
+        return rootGrid;
+    }
 }

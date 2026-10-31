@@ -1,7 +1,7 @@
 # MajiStudio (MajiOCR 名片辨識與跨平台通訊錄管理系統)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Latest Release](https://img.shields.io/badge/Release-v0.1.0.39-brightgreen.svg?logo=github)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
+[![Latest Release](https://img.shields.io/badge/Release-v0.1.0.40-brightgreen.svg?logo=github)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
 [![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6.svg?logo=windows)](https://github.com/Ryan-tw-Hans/MajiStudio/releases)
 [![Platform: iOS / Web](https://img.shields.io/badge/Platform-iOS%2016%2B%20PWA-000000.svg?logo=apple)](https://ryan-tw-hans.github.io/MajiStudio/)
 [![Platform: Android](https://img.shields.io/badge/Platform-Android-3DDC84.svg?logo=android)](https://github.com/Ryan-tw-Hans/MajiStudio)
@@ -17,7 +17,7 @@
 
 ```mermaid
 graph TD
-    subgraph Desktop ["Windows 桌面端 (MajiOCR.Windows v0.1.0.39)"]
+    subgraph Desktop ["Windows 桌面端 (MajiOCR.Windows v0.1.0.40)"]
         WinUI["WinUI 3 現代化流暢介面"]
         Tess["內嵌 Tesseract 5 離線多語 OCR 引擎"]
         SQLCipher["SQLCipher 4 AES-256 加密資料庫"]

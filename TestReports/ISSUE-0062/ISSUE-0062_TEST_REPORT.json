@@ -1,0 +1,62 @@
+﻿{
+  "Timestamp": "2026-10-31T06:27:13.7729871Z",
+  "Version": "0.1.0-beta.40",
+  "IssueId": "ISSUE-0062",
+  "Environment": "Microsoft Windows NT 10.0.26200.0 (X64)",
+  "NativeSqliteVersion": "",
+  "TotalTests": 0,
+  "PassCount": 0,
+  "FailCount": 0,
+  "NotRunCount": 0,
+  "OverallSuccess": true,
+  "TestCases": [
+    {
+      "TestId": "ISSUE-0062-T01",
+      "Description": "\u540D\u7247\u7E3D\u89BD\u7248\u9762\u4F48\u5C40\u914D\u7F6E\u6B63\u78BA\uFF1A\u5DE6\u5074 Star (MinWidth 360px)\uFF0C\u4E2D\u9593 Splitter\uFF0C\u53F3\u5074\u62BD\u5C5C\u9810\u8A2D 340px (MinWidth 260px)",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "defaultDrawer=340, minDrawer=260, minTable=360",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0062-T02",
+      "Description": "\u5411\u5DE6\u62D6\u66F3\u5206\u5272\u689D\u6642\uFF0C\u53F3\u5074\u62BD\u5C5C\u5BEC\u5EA6\u5373\u6642\u653E\u5927 (340px -\u003E 460px)\uFF0C\u4E14\u4E0D\u8D85\u51FA\u5DE6\u5074\u6700\u5C0F\u4FDD\u7559\u5BEC\u5EA6\u4E0A\u9650",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "newWidth=460, maxAllowed=828",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0062-T03",
+      "Description": "\u5411\u53F3\u62D6\u66F3\u5206\u5272\u689D\u6642\uFF0C\u53F3\u5074\u62BD\u5C5C\u5BEC\u5EA6\u5373\u6642\u7E2E\u5C0F\uFF0C\u4E14\u53D7 MinWidth (260px) \u9632\u5446\u4FDD\u8B77\u4E0D\u7834\u7248",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "calculated=190, clampedNewWidth=260",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0062-T04",
+      "Description": "\u6975\u9650\u62D6\u66F3\u9632\u8B77\uFF1A\u7576\u8996\u7A97\u7E2E\u7A84\u6642\uFF0C\u5F37\u5236\u4FDD\u7559\u5DE6\u5074\u540D\u7247\u8868\u683C\u81F3\u5C11 360px \u7A7A\u9593\uFF0C\u9632\u6B62\u88AB\u62BD\u5C5C\u5B8C\u5168\u906E\u853D",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "newWidth=328, remainingTableWidth=360",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0062-T05",
+      "Description": "\u62BD\u5C5C\u6536\u5408\u8207\u5C55\u958B\u8A18\u61B6\u9A57\u8B49\uFF1A\u8ABF\u6574\u81F3\u81EA\u8A02\u5BEC\u5EA6 (450px) \u5F8C\u6536\u5408\u70BA 0px\uFF0C\u518D\u6B21\u5C55\u958B\u80FD\u7CBE\u6E96\u9084\u539F\u70BA 450px",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "restoredWidth=450",
+      "LatencyMs": 0
+    },
+    {
+      "TestId": "ISSUE-0062-T06",
+      "Description": "\u96D9\u64CA\u5206\u5272\u689D\u91CD\u8A2D\u529F\u80FD\uFF1A\u96D9\u64CA\u5F8C\u62BD\u5C5C\u5BEC\u5EA6\u8207\u8A18\u61B6\u503C\u7ACB\u5373\u91CD\u8A2D\u70BA\u6A19\u6E96 340px",
+      "Status": "PASS",
+      "Passed": true,
+      "Details": "currentWidth=340",
+      "LatencyMs": 0
+    }
+  ]
+}
